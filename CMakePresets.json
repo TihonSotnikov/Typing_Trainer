@@ -1,0 +1,46 @@
+{
+  "version": 8,
+
+  "configurePresets": [
+    {
+      "name": "vcpkg-debug",
+      "displayName": "Vcpkg Debug",
+      "description": "Использует VCPKG_ROOT из переменных окружения",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": {
+          "type": "FILEPATH",
+          "value": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+        },
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "vcpkg-release",
+      "displayName": "Vcpkg Release",
+      "description": "Использует VCPKG_ROOT из переменных окружения",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": {
+          "type": "FILEPATH",
+          "value": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+        },
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    }
+  ],
+
+  
+  "buildPresets": [
+    {
+      "name": "debug",
+      "configurePreset": "vcpkg-debug",
+      "configuration": "Debug"
+    },
+    {
+      "name": "release",
+      "configurePreset": "vcpkg-release",
+      "configuration": "Release"
+    }
+  ]
+}
