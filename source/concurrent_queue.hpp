@@ -1,3 +1,5 @@
+#pragma once
+
 #include <condition_variable>
 #include <mutex>
 #include <optional>
@@ -9,10 +11,10 @@ template<typename T>
 class ConcurrentQueue
 {
 private:
-	std::queue<T>           queue_;
-	mutable std::mutex      mtx_;
-	std::condition_variable cv_;
-	bool                    closed_ = false;
+	std::queue<T>               queue_;
+	mutable std::mutex          mtx_;
+	std::condition_variable_any cv_;
+	bool                        closed_ = false;
 
 public:
 	ConcurrentQueue()  = default;
@@ -47,13 +49,14 @@ public:
 	}
 
 	/// \brief Ожидает появления элемента и извлекает его.
+	/// \param stoken Токен остановки для прерывания ожидания.
 	/// \return Извлеченный элемент или std::nullopt при закрытой и пустой очереди.
-	std::optional<T> wait_and_pop()
+	std::optional<T> wait_and_pop(std::stop_token stoken)
 	{
 		std::unique_lock<std::mutex> lock(mtx_);
-		cv_.wait(lock, [this]() -> auto { return !queue_.empty() || closed_; });
+		cv_.wait(lock, stoken, [this] { return !queue_.empty() || closed_; });
 		if (queue_.empty()) return std::nullopt;
-		T value = std::move(queue_.front());
+		std::optional<T> value = std::move(queue_.front());
 		queue_.pop();
 		return value;
 	}
@@ -64,7 +67,7 @@ public:
 	{
 		std::scoped_lock lock(mtx_);
 		if (queue_.empty()) return std::nullopt;
-		T value = std::move(queue_.front());
+		std::optional<T> value = std::move(queue_.front());
 		queue_.pop();
 		return value;
 	}
@@ -73,7 +76,7 @@ public:
 	void clear()
 	{
 		std::scoped_lock lock(mtx_);
-		std::queue<T> empty;
+		std::queue<T>    empty;
 		queue_.swap(empty);
 	}
 
