@@ -3,13 +3,16 @@ Language: Cpp
 BasedOnStyle: Microsoft
 IndentWidth: 4
 TabWidth: 4
+# Гарантирует использование табуляции для отступов
 UseTab: ForIndentation
 ColumnLimit: 100
 
+# Решение проблемы тернарных операторов
 BreakBeforeTernaryOperators: true
 ContinuationIndentWidth: 4
 AlignOperands: Align
 
+# Настройки скобок (сохранено из вашего конфига)
 BreakBeforeBraces: Custom
 BraceWrapping:
   AfterClass: true
@@ -27,20 +30,25 @@ BraceWrapping:
   SplitEmptyRecord: false
   SplitEmptyNamespace: false
 
+# Выравнивание
 PointerAlignment: Left
 AlignConsecutiveAssignments: Consecutive
 AlignConsecutiveDeclarations: Consecutive
 AlignTrailingComments: true
 
+# Пробелы
 SpaceBeforeParens: ControlStatements
 SpacesInParentheses: false
 SpacesInAngles: false
 SpaceBeforeAssignmentOperators: true
 
+# Препроцессор и неймспейсы
 NamespaceIndentation: None
 AccessModifierOffset: -4
+# Индексация самих директив (не кода внутри них)
 IndentPPDirectives: AfterHash
 
+# Компактность кода
 AllowShortFunctionsOnASingleLine: All
 AllowShortBlocksOnASingleLine: Always
 AllowShortIfStatementsOnASingleLine: AllIfsAndElse
@@ -48,6 +56,7 @@ AllowShortLoopsOnASingleLine: false
 AllowShortLambdasOnASingleLine: All
 RemoveBracesLLVM: true
 
+# Переносы и конструкторы
 AlwaysBreakAfterReturnType: None
 AlwaysBreakTemplateDeclarations: Yes
 SpaceAfterTemplateKeyword: false
@@ -56,6 +65,7 @@ BreakConstructorInitializers: AfterColon
 PackConstructorInitializers: BinPack
 BinPackArguments: true
 
+# Чистота
 KeepEmptyLinesAtTheStartOfBlocks: false
 MaxEmptyLinesToKeep: 2
 FixNamespaceComments: true

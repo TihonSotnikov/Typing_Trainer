@@ -1,5 +1,6 @@
 ---
 Checks: >
+  clang-diagnostic-*,
   clang-analyzer-*,
   bugprone-*,
   performance-*,
@@ -7,7 +8,9 @@ Checks: >
   cppcoreguidelines-*,
   readability-*,
   concurrency-*,
-  misc-const-correctness,
+  misc-*,
+  portability-*,
+  -portability-avoid-pragma-once,
   -llvm-header-guard,
   -cppcoreguidelines-pro-bounds-constant-array-index,
   -cppcoreguidelines-avoid-magic-numbers,
@@ -16,18 +19,20 @@ Checks: >
   -bugprone-easily-swappable-parameters,
   -cppcoreguidelines-pro-type-union,
   -cppcoreguidelines-pro-bounds-pointer-arithmetic,
-  -modernize-use-trailing-return-type
+  -modernize-use-trailing-return-type,
+  -misc-non-private-member-variables-in-classes,
+  -readability-identifier-length
 
 WarningsAsErrors: >
-  bugprone-use-after-move,
-  bugprone-suspicious-include,
-  bugprone-infinite-loop,
-  bugprone-dangling-handle,
-  bugprone-return-const-ref-from-parameter,
+  clang-diagnostic-*,
+  clang-analyzer-*,
+  bugprone-*,
+  performance-*,
+  concurrency-*,
   misc-const-correctness,
   cppcoreguidelines-owning-memory
 
-HeaderFilterRegex: '.*'
+ExtraArgs: ['-Wall', '-Wextra', '-Wunused-lambda-capture']
 
 CheckOptions:
   readability-identifier-naming.ClassCase: CamelCase
@@ -42,4 +47,5 @@ CheckOptions:
   readability-identifier-naming.MacroDefinitionCase: UPPER_CASE
   readability-identifier-naming.GlobalConstantCase: UPPER_CASE
   modernize-use-nodiscard.ReplacementString: '[[nodiscard]]'
+  bugprone-unchecked-optional-access.IgnoreSmartPointerDereference: false
 ...
