@@ -1,0 +1,93 @@
+#pragma once
+
+#include "../concurrent_queue.hpp"
+#include "../contracts.hpp"
+#include <chrono>
+#include <cstddef>
+#include <functional>
+#include <mutex>
+#include <optional>
+#include <stop_token>
+#include <string>
+#include <thread>
+#include <vector>
+
+namespace typing_trainer
+{
+
+/// \brief Реализация ядра тренажера слепой печати.
+/// Управляет жизненным циклом сессии тренировки, обрабатывает ввод
+/// в фоновом потоке и рассчитывает метрики скорости и точности.
+class TypingTrainerCore final : public ITypingTrainerCore
+{
+public:
+	TypingTrainerCore();
+	~TypingTrainerCore() override;
+
+	TypingTrainerCore(const TypingTrainerCore&)            = delete;
+	TypingTrainerCore(TypingTrainerCore&&)                 = delete;
+	TypingTrainerCore& operator=(const TypingTrainerCore&) = delete;
+	TypingTrainerCore& operator=(TypingTrainerCore&&)      = delete;
+
+	/// \brief Отправка события ввода во внутреннюю очередь бэкенда.
+	void push_input(InputEvent event) override;
+
+	/// \brief Неблокирующее извлечение события для графического интерфейса.
+	std::optional<BackendEvent> poll_output() override;
+
+	/// \brief Установка функции обратного вызова для уведомления UI о наличии данных.
+	void set_output_ready_callback(std::function<void()> callback) override;
+
+private:
+	// ----- ФУНКЦИИ -----
+
+	/// \brief Основной рабочий цикл фонового потока.
+	void process_loop(const std::stop_token& stop_token);
+
+	/// \brief Распределение входящего события по обработчикам.
+	void handle_event(const InputEvent& event);
+
+	/// \brief Запуск новой сессии тренировки.
+	void start_session(const StartSessionCommand& command);
+
+	/// \brief Прерывание текущей сессии.
+	void stop_session();
+
+	/// \brief Обработка нажатия клавиши.
+	void process_key_press(const KeyPressData& key_data);
+
+	/// \brief Потокобезопасный вызов колбэка интерфейса.
+	void notify_ui();
+
+	/// \brief Перерасчет метрик на основе текущего времени.
+	void recalculate_metrics(std::chrono::steady_clock::time_point current_time);
+
+
+	// ----- ДАННЫЕ -----
+
+	// Очереди асинхронного обмена сообщениями
+	ConcurrentQueue<InputEvent>   input_queue_;
+	ConcurrentQueue<BackendEvent> output_queue_;
+
+	// Синхронизация доступа к callback-функции
+	std::mutex            callback_mutex_;
+	std::function<void()> output_ready_callback_;
+
+	// Фоновый поток обработки ввода
+	std::jthread worker_thread_;
+
+	// Данные текущей сессии
+	std::mutex             session_mutex_;
+	bool                   is_active_ = false;
+	std::u32string         text_to_type_;
+	std::vector<CharState> chars_;
+	size_t                 cursor_ = 0;
+
+	// Статистика сессии и метрики
+	std::chrono::steady_clock::time_point start_time_;
+	size_t                                total_presses_ = 0;
+	size_t                                errors_count_  = 0;
+	SessionMetrics                        metrics_;
+};
+
+} // namespace typing_trainer
