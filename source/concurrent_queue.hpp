@@ -4,6 +4,8 @@
 #include <mutex>
 #include <optional>
 #include <queue>
+#include <stop_token>
+#include <utility>
 
 /// \brief Потокобезопасная очередь с возможностью закрытия.
 /// \tparam T Тип хранимых элементов.
@@ -41,7 +43,7 @@ public:
 	void push(U&& value)
 	{
 		{
-			std::scoped_lock lock(mtx_);
+			std::scoped_lock const lock(mtx_);
 			if (closed_) return;
 			queue_.push(std::forward<U>(value));
 		}
@@ -54,7 +56,7 @@ public:
 	std::optional<T> wait_and_pop(std::stop_token stoken)
 	{
 		std::unique_lock<std::mutex> lock(mtx_);
-		cv_.wait(lock, stoken, [this] { return !queue_.empty() || closed_; });
+		cv_.wait(lock, std::move(stoken), [this] { return !queue_.empty() || closed_; });
 		if (queue_.empty()) return std::nullopt;
 		std::optional<T> value = std::move(queue_.front());
 		queue_.pop();
@@ -65,7 +67,7 @@ public:
 	/// \return Извлеченный элемент или std::nullopt, если очередь пуста.
 	std::optional<T> try_pop()
 	{
-		std::scoped_lock lock(mtx_);
+		std::scoped_lock const lock(mtx_);
 		if (queue_.empty()) return std::nullopt;
 		std::optional<T> value = std::move(queue_.front());
 		queue_.pop();
@@ -84,7 +86,7 @@ public:
 	void close()
 	{
 		{
-			std::scoped_lock lock(mtx_);
+			std::scoped_lock const lock(mtx_);
 			closed_ = true;
 		}
 		cv_.notify_all();
