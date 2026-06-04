@@ -1,17 +1,24 @@
 cmake_minimum_required(VERSION 3.21)
 project(BlindTypingTrainer)
 
-# set(X_VCPKG_APPLOCAL_DEPS OFF CACHE BOOL "")
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 
 find_package(Qt6 COMPONENTS Widgets REQUIRED)
 qt_standard_project_setup()
 
-add_subdirectory(source/main_window)
+add_subdirectory(src/main_window)
 
-qt_add_executable(BlindTypingTrainer source/main.cpp)
+qt_add_executable(BlindTypingTrainer src/main.cpp)
+
+# Disables console with Release configuration selected.
+set_target_properties(BlindTypingTrainer PROPERTIES
+    WIN32_EXECUTABLE $<NOT:$<CONFIG:Debug>>
+)
+
 target_link_libraries(BlindTypingTrainer PRIVATE main_window Qt6::Widgets)
 
+# Deployment: Generates a deployment script and runs it after building the target.
+# Qt6 app should have necessary .dll plugins in the same directory as the executable.
 qt_generate_deploy_app_script(
     TARGET BlindTypingTrainer
     OUTPUT_SCRIPT deploy_script.cmake

@@ -1,4 +1,5 @@
 #include <QApplication>
+#include <stop_token>
 #include "main_window.h"
 
 int main(int argc, char *argv[]) {

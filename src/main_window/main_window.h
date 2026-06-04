@@ -1,11 +1,11 @@
-#ifndef MAINWINDOW_H
-#define MAINWINDOW_H
+#pragma once
 
 #include <QMainWindow>
 #include <QLabel>
 #include <QPushButton>
 
-class MainWindow : public QMainWindow {
+class MainWindow : public QMainWindow
+{
     Q_OBJECT
 
 public:
@@ -16,5 +16,3 @@ private:
     QLabel *helloLabel;
     QPushButton *closeButton;
 };
-
-#endif // MAINWINDOW_H

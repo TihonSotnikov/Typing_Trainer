@@ -32,14 +32,40 @@
 - **CMake** 3.16+
 - **Qt 6** (Core, Gui, Widgets)
 
-### Сборка и запуск
+### Установка зависимостей на Windows
+```ps1
+# Клонировать репозиторий vcpkg в любое удобное место на диске:
+git clone https://github.com/microsoft/vcpkg.git
+
+# Инициализировать vcpkg
+cd vcpkg
+./bootstrap-vcpkg.bat
+
+# Добавить абсолютный путь к директории vcpkg в Path
+# > Лучше это сделать через свойства компьютера
+# После этого нужно будет перезапустить терминал
+
+# Включить интеграцию с другими средами:
+vcpkg integrate install
+
+# Установить Qt6:
+vcpkg install qtbase:x64-windows
+# ^ Это может занять от получаса до нескольких часов
+```
+
+### Установка зависимостей на Linux
+```sh
+sudo apt install build-essential
+sudo apt install qt6-base-dev
+```
+
+### Сборка и запуск (Windows)
 ```bash
 git clone https://github.com/TihonSotnikov/Blind_Typing_Trainer.git
 cd Blind_Typing_Trainer
-mkdir build && cd build
-cmake ..
-cmake --build .
-./Blind_Typing_Trainer  # или Blind_Typing_Trainer.exe на Windows
+cmake -S source --preset vcpkg-release
+cmake --build build --preset release
+./build/Release/Blind_Typing_Trainer  # или Blind_Typing_Trainer.exe на Windows
 ```
 
 ---
