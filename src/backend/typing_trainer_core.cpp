@@ -89,6 +89,16 @@ void TypingTrainerCore::stop_session()
 	is_active_ = false;
 	chars_.clear();
 	text_to_type_.clear();
+	cursor_ = 0;
+	
+	SessionState empty_state{
+		.chars = chars_,
+		.cursor_position = cursor_,
+		.metrics = SessionMetrics{.wpm = 0.0, .cpm = 0.0, .accuracy = 100.0, .consistency = 0.0}
+	};
+	
+	output_queue_.push(empty_state);
+	notify_ui();
 }
 
 void TypingTrainerCore::process_key_press(const KeyPressData& key_data)

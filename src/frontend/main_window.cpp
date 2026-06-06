@@ -1,15 +1,17 @@
-#include "main_window.h"
+#include "main_window.hpp"
 #include <QVBoxLayout>
+#include <QHBoxLayout>
 #include <QWidget>
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     // 1. Настройка главного виджета и Layout'а (компоновщика)
     QWidget *centralWidget = new QWidget(this);
     QVBoxLayout *layout = new QVBoxLayout(centralWidget);
+    QHBoxLayout *buttonLayout = new QHBoxLayout();
 
     // 2. Создание элементов
-    helloLabel = new QLabel("Hello, World!", this);
-    helloLabel->setAlignment(Qt::AlignCenter);
+    helloLabel = new QLabel("BTS Template", this);
+    helloLabel->setContentsMargins(10, 10, 10, 10); // Отступы вокруг текста
 
     closeButton = new QPushButton("Закрыть приложение", this);
     
@@ -17,10 +19,15 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     connect(closeButton, &QPushButton::clicked, this, &QMainWindow::close);
 
     // 3. Добавляем элементы в Layout
-    layout->addStretch(); // Пружина сверху
-    layout->addWidget(helloLabel);
-    layout->addSpacing(20); // Отступ между текстом и кнопкой
-    layout->addWidget(closeButton, 0, Qt::AlignHCenter); // Центрируем кнопку
+    layout->setAlignment(Qt::AlignTop | Qt::AlignLeft); // Выравнивание по центру сверху
+    // layout->addStretch(); // Пружина сверху
+    layout->addWidget(helloLabel, 0, Qt::AlignLeft);
+    // layout->addSpacing(20); // Отступ между текстом и кнопкой
+    layout->addStretch(); // Пружина между текстом и кнопкой
+    layout->addLayout(buttonLayout);
+    buttonLayout->addStretch(); // Пружина слева от кнопки
+    buttonLayout->addWidget(closeButton, 0, Qt::AlignHCenter); // Центрируем кнопку
+    buttonLayout->addStretch(); // Пружина справа от кнопки
     layout->addStretch(); // Пружина снизу
 
     setCentralWidget(centralWidget);

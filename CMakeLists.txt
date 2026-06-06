@@ -1,29 +1,68 @@
 cmake_minimum_required(VERSION 3.21)
+
+set(X_VCPKG_APPLOCAL_DEPS_INSTALL ON)
+set(CMAKE_INSTALL_BINDIR .)
 project(BlindTypingTrainer)
 
-# set(X_VCPKG_APPLOCAL_DEPS OFF CACHE BOOL "")
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 
-find_package(Qt6 COMPONENTS Widgets REQUIRED)
+find_package(
+    Qt6 COMPONENTS Core Qml Quick Widgets QuickControls2 REQUIRED)
 qt_standard_project_setup()
 
-add_subdirectory(source/main_window)
+qt_policy(SET QTP0001 NEW) # Устанавливает стандартный префикс ресурса в ":/qt/qml/"
+qt_policy(SET QTP0004 NEW) # Включает строгую проверку структуры каталогов QML
 
-qt_add_executable(BlindTypingTrainer source/main.cpp)
-target_link_libraries(BlindTypingTrainer PRIVATE main_window Qt6::Widgets)
+add_subdirectory(src/frontend)
+add_subdirectory(src/backend)
 
+qt_add_executable(BlindTypingTrainer src/main.cpp)
+
+qt_add_qml_module(BlindTypingTrainer
+    URI BlindTypingTrainerModule
+    VERSION 1.0
+    QML_FILES
+        src/frontend/main.qml
+)
+
+# Disables console with Release configuration selected.
+set_target_properties(BlindTypingTrainer PROPERTIES
+    WIN32_EXECUTABLE $<NOT:$<CONFIG:Debug>>
+)
+
+target_link_libraries(
+    BlindTypingTrainer PRIVATE
+    frontend
+    backend
+    Qt6::Widgets
+    Qt6::Qml
+    Qt6::Quick
+    Qt6::QuickControls2
+)
+
+# Deployment: Generates a deployment script and runs it after building the target.
+# Qt6 app should have necessary .dll plugins in the same directory as the executable.
 if(WIN32)
-    qt_generate_deploy_app_script(
+    qt_generate_deploy_qml_app_script(
         TARGET BlindTypingTrainer
         OUTPUT_SCRIPT deploy_script.cmake
     )
-    add_custom_command(TARGET BlindTypingTrainer POST_BUILD
-        COMMAND ${CMAKE_COMMAND} 
-                -D "DEPLOY_TARGET=$<TARGET_FILE:BlindTypingTrainer>"
-                -D "QT_DEPLOY_PREFIX=$<TARGET_FILE_DIR:BlindTypingTrainer>"
-                -D "QT_DEPLOY_BIN_DIR=."
-                -P "${deploy_script.cmake}"
-        COMMENT "Running deployment for BlindTypingTrainer..."
-        VERBATIM
+    
+    install(TARGETS BlindTypingTrainer
+        BUNDLE DESTINATION .
+        RUNTIME DESTINATION .
     )
+    
+    # # Выполняем скрипт деплоя ТОЛЬКО во время процесса инсталляции
+    install(SCRIPT ${deploy_script.cmake})
+
+    # add_custom_command(TARGET BlindTypingTrainer POST_BUILD
+    #     COMMAND ${CMAKE_COMMAND} 
+    #             -D "DEPLOY_TARGET=$<TARGET_FILE:BlindTypingTrainer>"
+    #             -D "QT_DEPLOY_PREFIX=$<TARGET_FILE_DIR:BlindTypingTrainer>"
+    #             -D "QT_DEPLOY_BIN_DIR=."
+    #             -P "${deploy_script.cmake}"
+    #     COMMENT "Running deployment for BlindTypingTrainer..."
+    #     VERBATIM
+    # )
 endif()
