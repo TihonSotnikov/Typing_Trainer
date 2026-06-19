@@ -48,6 +48,8 @@ void TypingTrainerCore::handle_event(const InputEvent& event)
 		    using T = std::decay_t<decltype(arg)>;
 		    if constexpr (std::is_same_v<T, StartSessionCommand>) start_session(arg);
 		    else if constexpr (std::is_same_v<T, StopSessionCommand>) stop_session();
+		    else if constexpr (std::is_same_v<T, PauseSessionCommand>) pause_session();
+		    else if constexpr (std::is_same_v<T, ResumeSessionCommand>) resume_session();
 		    else if constexpr (std::is_same_v<T, KeyPressData>) process_key_press(arg);
 	    },
 	    event);
@@ -57,12 +59,8 @@ void TypingTrainerCore::start_session(const StartSessionCommand& command)
 {
 	std::scoped_lock const lock(session_mutex_);
 
-	if (command.config.mode == TrainingMode::Free) { text_to_type_ = command.config.custom_text; }
-	else
-	{
-		// Пока что заглушка
-		text_to_type_ = U"smart training mode is currently under construction";
-	}
+	if (command.config.mode == TrainingMode::Free) text_to_type_ = command.config.custom_text;
+	else text_to_type_ = U"smart training mode is currently under construction";
 
 	if (text_to_type_.empty()) return;
 
@@ -71,33 +69,72 @@ void TypingTrainerCore::start_session(const StartSessionCommand& command)
 	for (char32_t const ch : text_to_type_)
 		chars_.push_back(CharState{.character = ch, .status = CharStatus::Pending});
 
-	cursor_        = 0;
-	total_presses_ = 0;
-	errors_count_  = 0;
-	start_time_    = std::chrono::steady_clock::now();
-	metrics_       = SessionMetrics{.wpm = 0.0, .cpm = 0.0, .accuracy = 100.0, .consistency = 0.0};
-	is_active_     = true;
+	cursor_               = 0;
+	total_presses_        = 0;
+	errors_count_         = 0;
+	accumulated_duration_ = std::chrono::steady_clock::duration::zero();
+	last_resume_time_     = std::chrono::steady_clock::now();
+	status_               = SessionStatus::Active;
+	metrics_ = SessionMetrics{.wpm = 0.0, .cpm = 0.0, .accuracy = 100.0, .consistency = 0.0};
 
-	output_queue_.push(
-	    SessionState{.chars = chars_, .cursor_position = cursor_, .metrics = metrics_});
+	output_queue_.push(SessionState{
+	    .chars = chars_, .cursor_position = cursor_, .metrics = metrics_, .status = status_});
 	notify_ui();
 }
 
 void TypingTrainerCore::stop_session()
 {
 	std::scoped_lock const lock(session_mutex_);
-	is_active_ = false;
+	status_ = SessionStatus::Inactive;
 	chars_.clear();
 	text_to_type_.clear();
-	cursor_ = 0;
-	
+	cursor_               = 0;
+	accumulated_duration_ = std::chrono::steady_clock::duration::zero();
+
 	SessionState empty_state{
-		.chars = chars_,
-		.cursor_position = cursor_,
-		.metrics = SessionMetrics{.wpm = 0.0, .cpm = 0.0, .accuracy = 100.0, .consistency = 0.0}
-	};
-	
+	    .chars           = chars_,
+	    .cursor_position = cursor_,
+	    .metrics = SessionMetrics{.wpm = 0.0, .cpm = 0.0, .accuracy = 100.0, .consistency = 0.0},
+	    .status  = status_};
+
 	output_queue_.push(empty_state);
+	notify_ui();
+}
+
+void TypingTrainerCore::pause_session()
+{
+	std::scoped_lock const lock(session_mutex_);
+	pause_session_internal();
+}
+
+void TypingTrainerCore::pause_session_internal()
+{
+	if (status_ != SessionStatus::Active) return;
+
+	auto const now = std::chrono::steady_clock::now();
+	accumulated_duration_ += (now - last_resume_time_);
+	status_ = SessionStatus::Paused;
+
+	output_queue_.push(SessionState{
+	    .chars = chars_, .cursor_position = cursor_, .metrics = metrics_, .status = status_});
+	notify_ui();
+}
+
+void TypingTrainerCore::resume_session()
+{
+	std::scoped_lock const lock(session_mutex_);
+	resume_session_internal();
+}
+
+void TypingTrainerCore::resume_session_internal()
+{
+	if (status_ != SessionStatus::Paused) return;
+
+	last_resume_time_ = std::chrono::steady_clock::now();
+	status_           = SessionStatus::Active;
+
+	output_queue_.push(SessionState{
+	    .chars = chars_, .cursor_position = cursor_, .metrics = metrics_, .status = status_});
 	notify_ui();
 }
 
@@ -105,14 +142,14 @@ void TypingTrainerCore::process_key_press(const KeyPressData& key_data)
 {
 	std::scoped_lock const lock(session_mutex_);
 
-	if (!is_active_) return;
+	if (status_ != SessionStatus::Active) return;
 
 	if (std::holds_alternative<ControlKey>(key_data.key))
 	{
 		auto const ctrl = std::get<ControlKey>(key_data.key);
 		if (ctrl == ControlKey::Escape)
 		{
-			is_active_ = false;
+			pause_session_internal();
 			return;
 		}
 
@@ -127,7 +164,8 @@ void TypingTrainerCore::process_key_press(const KeyPressData& key_data)
 				                               .changed_char    = chars_.at(cursor_),
 				                               .cursor_position = cursor_,
 				                               .metrics         = metrics_,
-				                               .is_completed    = false});
+				                               .is_completed    = false,
+				                               .status          = status_});
 				notify_ui();
 			}
 			return;
@@ -152,14 +190,16 @@ void TypingTrainerCore::process_key_press(const KeyPressData& key_data)
 
 		bool const is_completed = (cursor_ == text_to_type_.size() - 1);
 
+		if (is_completed) status_ = SessionStatus::Completed;
+
 		StateUpdate update{.changed_index   = cursor_,
 		                   .changed_char    = chars_.at(cursor_),
 		                   .cursor_position = is_completed ? cursor_ : cursor_ + 1,
 		                   .metrics         = metrics_,
-		                   .is_completed    = is_completed};
+		                   .is_completed    = is_completed,
+		                   .status          = status_};
 
-		if (is_completed) is_active_ = false;
-		else cursor_++;
+		if (!is_completed) cursor_++;
 
 		output_queue_.push(update);
 		notify_ui();
@@ -168,8 +208,8 @@ void TypingTrainerCore::process_key_press(const KeyPressData& key_data)
 
 void TypingTrainerCore::recalculate_metrics(std::chrono::steady_clock::time_point current_time)
 {
-	std::chrono::duration<double> const elapsed = current_time - start_time_;
-	double const                        seconds = elapsed.count();
+	auto const   total_duration = accumulated_duration_ + (current_time - last_resume_time_);
+	double const seconds        = std::chrono::duration<double>(total_duration).count();
 
 	if (seconds > 0.05)
 	{
@@ -193,7 +233,6 @@ void TypingTrainerCore::recalculate_metrics(std::chrono::steady_clock::time_poin
 		metrics_.accuracy = 100.0;
 	}
 
-	// Пока что заглушка
 	metrics_.consistency = 0.0;
 }
 

@@ -53,6 +53,18 @@ private:
 	/// \brief Прерывание текущей сессии.
 	void stop_session();
 
+	/// \brief Потокобезопасная приостановка текущей сессии.
+	void pause_session();
+
+	/// \brief Внутренний метод приостановки без захвата мьютекса.
+	void pause_session_internal();
+
+	/// \brief Потокобезопасное возобновление текущей сессии.
+	void resume_session();
+
+	/// \brief Внутренний метод возобновления без захвата мьютекса.
+	void resume_session_internal();
+
 	/// \brief Обработка нажатия клавиши.
 	void process_key_press(const KeyPressData& key_data);
 
@@ -78,13 +90,14 @@ private:
 
 	// Данные текущей сессии
 	std::mutex             session_mutex_;
-	bool                   is_active_ = false;
+	SessionStatus          status_ = SessionStatus::Inactive;
 	std::u32string         text_to_type_;
 	std::vector<CharState> chars_;
 	size_t                 cursor_ = 0;
 
 	// Статистика сессии и метрики
-	std::chrono::steady_clock::time_point start_time_;
+	std::chrono::steady_clock::time_point last_resume_time_;
+	std::chrono::steady_clock::duration   accumulated_duration_{0};
 	size_t                                total_presses_ = 0;
 	size_t                                errors_count_  = 0;
 	SessionMetrics                        metrics_;
