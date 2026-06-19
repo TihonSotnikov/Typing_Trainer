@@ -2,6 +2,7 @@
 
 #include "../concurrent_queue.hpp"
 #include "../contracts.hpp"
+#include "ngram_statistics.hpp"
 #include <chrono>
 #include <cstddef>
 #include <functional>
@@ -101,6 +102,9 @@ private:
 	size_t                                total_presses_ = 0;
 	size_t                                errors_count_  = 0;
 	SessionMetrics                        metrics_;
+
+	// Сбор статистики n-грамм для smart-режима
+	NgramStatistics ngram_stats_;
 };
 
 } // namespace typing_trainer

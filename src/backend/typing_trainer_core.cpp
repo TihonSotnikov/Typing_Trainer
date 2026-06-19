@@ -77,6 +77,8 @@ void TypingTrainerCore::start_session(const StartSessionCommand& command)
 	status_               = SessionStatus::Active;
 	metrics_ = SessionMetrics{.wpm = 0.0, .cpm = 0.0, .accuracy = 100.0, .consistency = 0.0};
 
+	ngram_stats_.reset_context();
+
 	output_queue_.push(SessionState{
 	    .chars = chars_, .cursor_position = cursor_, .metrics = metrics_, .status = status_});
 	notify_ui();
@@ -132,6 +134,7 @@ void TypingTrainerCore::resume_session_internal()
 
 	last_resume_time_ = std::chrono::steady_clock::now();
 	status_           = SessionStatus::Active;
+	ngram_stats_.reset_context(); // интервал через паузу как flight-time невалиден
 
 	output_queue_.push(SessionState{
 	    .chars = chars_, .cursor_position = cursor_, .metrics = metrics_, .status = status_});
@@ -155,6 +158,8 @@ void TypingTrainerCore::process_key_press(const KeyPressData& key_data)
 
 		if (ctrl == ControlKey::Backspace)
 		{
+			ngram_stats_.reset_context(); // перепечатывание даст мусорный контекст
+
 			if (cursor_ > 0)
 			{
 				--cursor_;
@@ -185,6 +190,8 @@ void TypingTrainerCore::process_key_press(const KeyPressData& key_data)
 
 		total_presses_++;
 		if (!is_correct) errors_count_++;
+
+		ngram_stats_.feed(expected, key_data.timestamp, is_correct);
 
 		recalculate_metrics(key_data.timestamp);
 
