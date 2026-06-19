@@ -26,6 +26,15 @@ enum class CharStatus : std::uint8_t
 	Wrong
 };
 
+/// \brief Статус жизненного цикла сессии.
+enum class SessionStatus : std::uint8_t
+{
+	Inactive, ///< Не запущена.
+	Active,   ///< Запущена и идет набор текста.
+	Paused,   ///< Приостановлена. Ввод заблокирован.
+	Completed ///< Успешно завершена.
+};
+
 struct CharState
 {
 	char32_t   character;
@@ -58,10 +67,20 @@ struct StartSessionCommand
 {
 	SessionConfig config;
 };
+
 struct StopSessionCommand
 {};
 
-using InputEvent = std::variant<KeyPressData, StartSessionCommand, StopSessionCommand>;
+/// \brief Команда приостановки сессии (от фронтенд-таймера или кнопки UI).
+struct PauseSessionCommand
+{};
+
+/// \brief Команда возобновления сессии.
+struct ResumeSessionCommand
+{};
+
+using InputEvent = std::variant<KeyPressData, StartSessionCommand, StopSessionCommand,
+                                PauseSessionCommand, ResumeSessionCommand>;
 
 
 // ----- BACKEND -> FRONTEND (ОБРАБОТКА И ВЫВОД) -----
@@ -80,6 +99,7 @@ struct SessionState
 	std::vector<CharState> chars;
 	size_t                 cursor_position = 0;
 	SessionMetrics         metrics;
+	SessionStatus          status = SessionStatus::Inactive; ///< Текущий статус сессии.
 };
 
 /// \brief Дельта-обновление для быстрой отрисовки в процессе печати.
@@ -89,7 +109,8 @@ struct StateUpdate
 	CharState      changed_char{};
 	size_t         cursor_position{};
 	SessionMetrics metrics;
-	bool           is_completed = false; ///< Флаг успешного набора всего текста.
+	bool           is_completed = false;                 ///< Флаг успешного набора всего текста.
+	SessionStatus  status       = SessionStatus::Active; ///< Текущий статус сессии.
 };
 
 using BackendEvent = std::variant<SessionState, StateUpdate>;
