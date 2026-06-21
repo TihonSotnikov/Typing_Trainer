@@ -575,6 +575,27 @@ ApplicationWindow {
                 event.accepted = true;
             }
         }
+
+        Item {
+            id: settingsInputField
+            anchors.fill: parent
+            focus: true
+            
+            onActiveFocusChanged: {
+                let isCurrentScreen = (stackView.currentItem === settingsScreen);
+
+                if (!activeFocus && isCurrentScreen) {
+                    settingsInputField.forceActiveFocus();
+                }
+            }
+
+            Keys.onPressed: (event) => {
+                if (event.key === Qt.Key_Escape) {
+                    stackView.pop();
+                }
+                event.accepted = true;
+            }
+        }
     }
 
 }
