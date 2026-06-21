@@ -1,110 +1,98 @@
-# ⌨️ Blind Typing Trainer
+# Blind Typing Trainer
 
-> **Адаптивный клавиатурный тренажер с анализом проблемных n-грамм пользователя**
+Десктопный тренажёр слепой печати, который находит ваши слабые сочетания клавиш
+и генерирует упражнения именно под них.
 
-[![C++](https://img.shields.io/badge/C++-17-blue.svg)](https://en.cppreference.com/)
-[![Qt](https://img.shields.io/badge/Qt-6.0+-green.svg)](https://www.qt.io/)
-[![CMake](https://img.shields.io/badge/CMake-3.16+-red.svg)](https://cmake.org/)
-
----
-
-## 📋 О проекте
-
-Кроссплатформенное десктопное приложение для тренировки слепой печати. Главная особенность — алгоритмическое выявление слабых мест пользователя (медленный набор или частые ошибки на конкретных сочетаниях клавиш) и динамическая генерация текста для их отработки.
-
-### 🎯 Режимы работы
-- **Свободный режим:** Тренировка на тексте, загруженном пользователем.
-- **Smart-тренировка:** Динамическая генерация батчей (10-30 слов) из встроенного словаря на основе метрик проблемных n-грамм.
-
-### 🧠 Алгоритм подбора слов (N-граммы)
-1. **Сбор данных:** Разбиение ввода пользователя на 1-, 2- и 3-граммы.
-2. **Оценка:** Вычисление веса каждой n-граммы по формуле: 
-   $W = T_{avg} + \lambda \cdot E$
-   *(где $T_{avg}$ — среднее время ввода n-граммы, $E$ — количество ошибок, $\lambda$ — штрафной коэффициент).*
-3. **Генерация:** Выборка из словаря слов, содержащих n-граммы с наибольшим весом $W$.
+[![C++](https://img.shields.io/badge/C%2B%2B-20-blue.svg)](https://en.cppreference.com/)
+[![Qt](https://img.shields.io/badge/Qt-6%20(QML%2FQuick)-41cd52.svg)](https://www.qt.io/)
+[![CMake](https://img.shields.io/badge/CMake-3.21%2B-red.svg)](https://cmake.org/)
 
 ---
 
-## 🚀 Быстрый старт
+## Что это
 
-### Требования
-- Компилятор с поддержкой **C++17** (GCC 10+, Clang 10+, MSVC 19.29+)
-- **CMake** 3.16+
-- **Qt 6** (Core, Gui, Widgets)
+Тренажёр измеряет время и ошибки по каждой n-грамме (1–3 символа), определяет, какие
+сочетания даются вам тяжелее всего, и собирает из реальных слов текст, насыщенный именно
+ими. Статистика копится между запусками — чем дольше пользуетесь, тем точнее подбор.
 
-### Установка зависимостей на Windows
-```ps1
-# Клонировать репозиторий vcpkg в любое удобное место на диске:
-git clone https://github.com/microsoft/vcpkg.git
+**Режимы:**
 
-# Инициализировать vcpkg
-cd vcpkg
-./bootstrap-vcpkg.bat
+- **Smart** — текст генерируется из частотного словаря под ваши проблемные n-граммы.
+- **Свободный** — тренировка на собственном тексте.
 
-# Добавить абсолютный путь к директории vcpkg в Path
-# > Лучше это сделать через свойства компьютера
-# После этого нужно будет перезапустить терминал
+**Метрики в реальном времени:** WPM, CPM, точность и *consistency* — ритмичность печати
+(разброс интервалов между нажатиями), а не только скорость.
 
-# Включить интеграцию с другими средами:
-vcpkg integrate install
+---
 
-# Установить Qt6:
-vcpkg install qtbase:x64-windows
-vcpkg install qtdeclarative:x64-windows
-# ^ Это может занять от получаса до нескольких часов
+## Архитектура
+
+Проект разделён на два слоя, общающихся через единственный контракт
+[`src/contracts.hpp`](src/contracts.hpp): фронтенд не знает о внутренностях ядра, ядро не
+знает о Qt.
+
+- **`backend/`** — чистый C++20 без Qt. `TypingTrainerCore` (машина состояний сессии и
+  метрики), `NgramStatistics` (статистика n-грамм, веса, JSON-персистентность),
+  `SmartTextGenerator` (генерация текста), `dictionaries` (словари en/ru).
+- **`frontend/`** — Qt Quick/QML. `QmlTypingTrainerAdapter` мостит QML и ядро.
+
+Обмен асинхронный: UI кладёт `InputEvent` в потокобезопасную очередь, фоновый
+`std::jthread` обрабатывает их и возвращает `BackendEvent` (полный `SessionState` или
+дельту `StateUpdate`). UI никогда не блокируется на вычислениях.
+
+**Алгоритм Smart-режима.** Каждое нажатие учитывается во всех n-граммах, оканчивающихся на
+текущем символе (накапливаются flight-time, попытки, ошибки; контекст строится по эталонному
+тексту, поэтому опечатки его не загрязняют). Вес проблемности грамма — **W = T_avg + λ ·
+error_rate**. Генератор берёт худшие граммы и собирает блок из словарных слов с этими
+граммами, разбавляя обычными словами в заданной пропорции (`filler_ratio`).
+
+---
+
+## Сборка и запуск
+
+**Требования:** C++20 (GCC 11+, Clang 13+, MSVC 19.30+), CMake 3.21+, Qt 6
+(`Core Qml Quick Widgets QuickControls2 QuickEffects`), nlohmann/json. На Windows —
+зависимости через [vcpkg](https://github.com/microsoft/vcpkg) (`VCPKG_ROOT` указывает на каталог vcpkg).
+
+**Windows (vcpkg):**
+
+```powershell
+vcpkg install qtbase:x64-windows qtdeclarative:x64-windows nlohmann-json:x64-windows
+cmake --preset vcpkg-release && cmake --build --preset release && cmake --install build/vcpkg-release --prefix dist
 ```
 
-### Установка зависимостей на Linux
+**Linux:**
+
 ```sh
-sudo apt install build-essential
-sudo apt install qt6-base-dev
-sudo apt install qt6-declarative-dev qml6-module-qtquick qml6-module-qtquick-controls qml6-module-qtquick-layouts
+sudo apt install build-essential cmake qt6-base-dev qt6-declarative-dev nlohmann-json3-dev qml6-module-qtquick qml6-module-qtquick-controls qml6-module-qtquick-layouts
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build && ./build/BlindTypingTrainer
 ```
 
-### Сборка и запуск (Windows)
-```bash
-git clone https://github.com/TihonSotnikov/Blind_Typing_Trainer.git
-cd Blind_Typing_Trainer
-cmake -S source --preset vcpkg-release
-cmake --build build --preset release
-cmake --install build --config release --prefix "$pwd/dist"
-./dist/BlindTypingTrainer.exe
-```
+Пресеты сборки — в [`CMakePresets.json`](CMakePresets.json).
 
 ---
 
-## 🏗️ Архитектура и структура
+## Статус и планы
 
-Проект строго разделен на Backend (Core логика) и Frontend (Qt UI). Обмен данными происходит через фиксированный API (структуры `SessionState`, `Metrics`).
-
-```text
-Blind_Typing_Trainer/
-├── docs/              # Документация проекта
-├── include/           # Публичные заголовки (API-контракт между Core и UI)
-├── src/
-│   ├── backend/       # Машина состояний, расчет метрик, NgramAnalyzer, DataManager
-│   └── frontend/      # Qt-окна, рендер текста с подсветкой, отображение статистики
-├── data/              # Базовые словари (генерация LLM)
-└── CMakeLists.txt     # Сценарий сборки
-```
+- Экран статистики: история результатов и самые проблемные n-граммы.
+- Пауза/возобновление из интерфейса (в ядре уже есть).
+- Расширение словарей и новые языки.
+- Автотесты ядра и CI.
 
 ---
 
-## 📊 Отслеживаемые метрики
+## Команда
 
-- **Speed:** WPM (слов в минуту) и CPM (символов в минуту).
-- **Accuracy:** Точность набора (процент правильных нажатий).
-- **Consistency:** Стабильность ритма печати (стандартное отклонение интервалов между нажатиями).
-- **Хранение данных:** Вся статистика и веса n-грамм сохраняются локально в JSON-профиль пользователя.
+| Слой | Разработчик | Зона ответственности |
+|------|-------------|----------------------|
+| **Backend** | Тихон Сотников | Ядро сессии, машина состояний, метрики, алгоритм n-грамм, Smart-генератор, JSON-персистентность, потоковая модель. |
+| **Frontend** | Андрей Червов | UI на Qt Quick/QML, адаптер `QObject`, обработка ввода, отрисовка текста и курсора, темы, метрики. |
 
----
-
-## 👥 Команда и разделение ответственности
-
-| Модуль | Разработчик | Зона ответственности |
-|--------|-------------|----------------------|
-| **⚙️ Backend** | Тихон Сотников | Движок сессии, алгоритм `NgramAnalyzer`, расчет метрик, чтение/запись JSON-профиля. |
-| **🖥️ Frontend** | Андрей Червов | Qt-интерфейс, обработка ввода, динамическая подсветка текста (курсор/ошибки), визуализация статистики. |
+Граница между зонами — контракт [`src/contracts.hpp`](src/contracts.hpp); изменения
+согласуются только через него.
 
 ---
-**Технологический стек:** C++, Qt Framework, CMake, Git.
+
+## Лицензия
+
+См. [LICENSE](LICENSE).
