@@ -4,10 +4,15 @@ set(X_VCPKG_APPLOCAL_DEPS_INSTALL ON)
 set(CMAKE_INSTALL_BINDIR .)
 set(CMAKE_AUTORCC ON)
 project(BlindTypingTrainer)
-list(APPEND CMAKE_PREFIX_PATH "$ENV{VCPKG_ROOT}/installed/x64-windows")
 
+list(APPEND CMAKE_PREFIX_PATH "$ENV{VCPKG_ROOT}/installed/x64-windows")
 set(CMAKE_CXX_STANDARD 20)
 
+if (MSVC)
+    add_compile_options(/utf-8)
+endif()
+
+find_package(nlohmann_json 3.12.0 REQUIRED)
 find_package(
     Qt6 COMPONENTS Core Qml Quick Widgets QuickControls2 QuickEffects REQUIRED)
 qt_standard_project_setup()
