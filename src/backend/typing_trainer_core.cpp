@@ -15,6 +15,20 @@
 namespace typing_trainer
 {
 
+namespace
+{
+
+/// \brief Привести символ к нижнему регистру для языков приложения (EN и RU).
+char32_t to_lower_app(char32_t ch)
+{
+	if (ch >= U'A' && ch <= U'Z') return ch + 0x20; // латиница
+	if (ch >= U'А' && ch <= U'Я') return ch + 0x20; // кириллица А-Я -> а-я
+	if (ch == U'Ё') return U'ё';                    // отдельная буква Ё
+	return ch;
+}
+
+} // namespace
+
 TypingTrainerCore::TypingTrainerCore()
 {
 	worker_thread_ = std::jthread([this](const std::stop_token& stoken) { process_loop(stoken); });
@@ -67,7 +81,8 @@ void TypingTrainerCore::start_session(const StartSessionCommand& command)
 	{
 		auto const  weighted = ngram_stats_.weighted_ngrams();
 		auto const& dict     = dictionary(command.config.language);
-		text_to_type_        = smart_generator_.generate(weighted, dict);
+		text_to_type_ = smart_generator_.generate(weighted, dict, command.config.filler_ratio,
+		                                          command.config.target_length);
 	}
 
 	if (text_to_type_.empty()) return;
@@ -78,6 +93,7 @@ void TypingTrainerCore::start_session(const StartSessionCommand& command)
 		chars_.push_back(CharState{.character = ch, .status = CharStatus::Pending});
 
 	cursor_               = 0;
+	ignore_case_          = command.config.ignore_case;
 	total_presses_        = 0;
 	errors_count_         = 0;
 	accumulated_duration_ = std::chrono::steady_clock::duration::zero();
@@ -194,7 +210,8 @@ void TypingTrainerCore::process_key_press(const KeyPressData& key_data)
 		char32_t const pressed  = std::get<char32_t>(key_data.key);
 		char32_t const expected = text_to_type_.at(cursor_);
 
-		bool const is_correct = (pressed == expected);
+		bool const is_correct = ignore_case_ ? (to_lower_app(pressed) == to_lower_app(expected))
+		                                     : (pressed == expected);
 
 		chars_.at(cursor_).status = is_correct ? CharStatus::Correct : CharStatus::Wrong;
 

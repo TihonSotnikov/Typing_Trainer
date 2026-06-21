@@ -97,13 +97,13 @@ void NgramStatistics::save() const
 	for (auto const& [gram, stat] : stats_)
 	{
 		nlohmann::json entry = stat;
-		entry["gram"]        = std::vector<std::uint32_t>(gram.begin(), gram.end());
+		entry.emplace("gram", std::vector<std::uint32_t>(gram.begin(), gram.end()));
 		ngrams.push_back(std::move(entry));
 	}
 
 	nlohmann::json root;
-	root["version"] = K_SCHEMA_VERSION;
-	root["ngrams"]  = std::move(ngrams);
+	root.emplace("version", K_SCHEMA_VERSION);
+	root.emplace("ngrams", std::move(ngrams));
 
 	std::ofstream file(K_STATS_FILE_PATH);
 	if (file) file << root.dump(2);

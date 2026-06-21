@@ -14,7 +14,8 @@ namespace typing_trainer
 SmartTextGenerator::SmartTextGenerator() : rng_(std::random_device{}()) {}
 
 std::u32string SmartTextGenerator::generate(const std::vector<WeightedNgram>&  weighted_ngrams,
-                                            const std::vector<std::u32string>& dictionary)
+                                            const std::vector<std::u32string>& dictionary,
+                                            double filler_ratio, std::size_t target_length)
 {
 	if (dictionary.empty()) return {};
 
@@ -30,7 +31,7 @@ std::u32string SmartTextGenerator::generate(const std::vector<WeightedNgram>&  w
 		double score = 0.0;
 		for (std::size_t i = 0; i < target_count; ++i)
 		{
-			WeightedNgram const& wn = weighted_ngrams[i];
+			WeightedNgram const& wn = weighted_ngrams.at(i);
 			if (word.find(wn.gram) != std::u32string::npos) score += wn.weight;
 		}
 		if (score > 0.0)
@@ -48,12 +49,12 @@ std::u32string SmartTextGenerator::generate(const std::vector<WeightedNgram>&  w
 	bool const has_scored = !scored_words.empty();
 
 	std::u32string result;
-	while (result.size() < K_TARGET_LENGTH)
+	while (result.size() < target_length)
 	{
-		bool const take_filler = !has_scored || (coin(rng_) < K_FILLER_RATIO);
+		bool const take_filler = !has_scored || (coin(rng_) < filler_ratio);
 
 		std::u32string const& word
-		    = take_filler ? dictionary[filler_pick(rng_)] : scored_words[weighted_pick(rng_)];
+		    = take_filler ? dictionary.at(filler_pick(rng_)) : scored_words.at(weighted_pick(rng_));
 
 		if (!result.empty()) result.push_back(U' ');
 		result += word;

@@ -95,7 +95,8 @@ private:
 	SessionStatus          status_ = SessionStatus::Inactive;
 	std::u32string         text_to_type_;
 	std::vector<CharState> chars_;
-	size_t                 cursor_ = 0;
+	size_t                 cursor_      = 0;
+	bool                   ignore_case_ = false;
 
 	// Статистика сессии и метрики
 	std::chrono::steady_clock::time_point last_resume_time_;

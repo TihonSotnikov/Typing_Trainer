@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <optional>
@@ -54,6 +55,8 @@ struct SessionConfig
 	std::u32string custom_text;
 	bool           ignore_case = false;
 	Language       language    = Language::English; ///< Словарь для Smart-режима.
+	double         filler_ratio  = 0.3; ///< Доля обычных слов в Smart-режиме («сложность»).
+	std::size_t    target_length = 250; ///< Размер блока Smart-режима в символах.
 };
 
 
