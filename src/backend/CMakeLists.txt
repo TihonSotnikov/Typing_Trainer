@@ -4,6 +4,10 @@ add_library(
     typing_trainer_core.hpp
     ngram_statistics.cpp
     ngram_statistics.hpp
+    dictionaries.cpp
+    dictionaries.hpp
+    smart_text_generator.cpp
+    smart_text_generator.hpp
 )
 
 target_include_directories(

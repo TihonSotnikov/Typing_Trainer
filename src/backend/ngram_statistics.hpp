@@ -7,6 +7,7 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace typing_trainer
 {
@@ -17,6 +18,14 @@ struct NgramStat
 	std::uint64_t occurrences = 0;   ///< Корректные нажатия, давшие валидное время.
 	double        total_time  = 0.0; ///< Сумма flight-time по ним, сек.
 	std::uint64_t errors      = 0;   ///< Ошибки на этой n-грамме.
+	std::uint64_t attempts    = 0;   ///< Все нажатия (любой flight, даже с выбросами).
+};
+
+/// \brief n-грамма с посчитанным весом проблемности (для smart-генератора.
+struct WeightedNgram
+{
+	std::u32string gram;
+	double         weight = 0.0;
 };
 
 /// \brief Сбор статистики проблемных n-грамм (1..3 символа) по потоку нажатий.
@@ -57,15 +66,26 @@ public:
 	///       статистика просто остаётся пустой.
 	void load();
 
+	/// \brief Снимок n-грамм с весом W = T_avg + λ·error_rate, по убыванию веса.
+	/// \note Граммы с attempts < K_MIN_ATTEMPTS отброшены как шум. НЕ потокобезопасна, только
+	/// worker-поток.
+	[[nodiscard]] std::vector<WeightedNgram> weighted_ngrams() const;
+
 private:
 	/// \brief Записать наблюдение во все n-граммы (1..3), оканчивающиеся на expected.
 	void accumulate(char32_t expected, std::optional<double> flight_sec, bool correct);
 
+	// Статистика n-грамм.
 	static constexpr double      K_MAX_FLIGHT_SECONDS = 1.5; ///< Отсечение пауз/выбросов.
 	static constexpr std::size_t K_MAX_CONTEXT        = 2;   ///< До 2 символов слева -> n до 3.
 
+	// Вес n-грамм.
+	static constexpr double        K_ERROR_WEIGHT = 1.0; ///< λ: вес error_rate в формуле W.
+	static constexpr std::uint64_t K_MIN_ATTEMPTS
+	    = 5; ///< Порог attempts: ниже - шум, грамма отброшена.
+
 	std::unordered_map<std::u32string, NgramStat> stats_;
-	std::u32string                                context_; ///< До K_MAX_CONTEXT последних expected.
+	std::u32string context_; ///< До K_MAX_CONTEXT последних expected.
 	std::optional<std::chrono::steady_clock::time_point> last_ts_;
 };
 

@@ -2,6 +2,7 @@
 #include <stop_token>
 
 #include "../contracts.hpp"
+#include "dictionaries.hpp"
 #include <chrono>
 #include <cstddef>
 #include <functional>
@@ -61,8 +62,13 @@ void TypingTrainerCore::start_session(const StartSessionCommand& command)
 {
 	std::scoped_lock const lock(session_mutex_);
 
-	if (command.config.mode == TrainingMode::Free) text_to_type_ = command.config.custom_text;
-	else text_to_type_ = U"smart training mode is currently under construction";
+	if (command.config.mode == TrainingMode::Free) { text_to_type_ = command.config.custom_text; }
+	else
+	{
+		auto const  weighted = ngram_stats_.weighted_ngrams();
+		auto const& dict     = dictionary(command.config.language);
+		text_to_type_        = smart_generator_.generate(weighted, dict);
+	}
 
 	if (text_to_type_.empty()) return;
 
