@@ -3,6 +3,7 @@
 #include "../concurrent_queue.hpp"
 #include "../contracts.hpp"
 #include "ngram_statistics.hpp"
+#include "smart_text_generator.hpp"
 #include <chrono>
 #include <cstddef>
 #include <functional>
@@ -105,6 +106,9 @@ private:
 
 	// Сбор статистики n-грамм для smart-режима
 	NgramStatistics ngram_stats_;
+
+	// Генератор текста для smart-режима
+	SmartTextGenerator smart_generator_;
 };
 
 } // namespace typing_trainer
