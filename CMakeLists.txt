@@ -15,6 +15,7 @@ qt_standard_project_setup()
 qt_policy(SET QTP0001 NEW) # Устанавливает стандартный префикс ресурса в ":/qt/qml/"
 qt_policy(SET QTP0004 NEW) # Включает строгую проверку структуры каталогов QML
 
+add_subdirectory(src)
 add_subdirectory(src/frontend)
 add_subdirectory(src/backend)
 
@@ -32,6 +33,7 @@ qt_add_qml_module(BlindTypingTrainer
         src/frontend/main.qml
         src/frontend/Theme.qml
         src/frontend/elements/XButton.qml
+        src/frontend/elements/XSegmentedControl.qml
 )
 
 # Disables console with Release configuration selected.

@@ -1,4 +1,5 @@
 #include "typing_trainer_adapter.hpp"
+#include "typing_trainer_core.hpp"
 #include <QMetaObject>
 
 namespace typing_trainer
@@ -27,6 +28,15 @@ void QmlTypingTrainerAdapter::startSession(const QString& text)
     StartSessionCommand cmd;
     cmd.config.mode = TrainingMode::Free;
     cmd.config.custom_text = text.toStdU32String();
+    m_core->push_input(cmd);
+}
+
+
+void QmlTypingTrainerAdapter::startFreeSession()
+{
+    StartSessionCommand cmd;
+    cmd.config.mode = TrainingMode::Free;
+    cmd.config.custom_text = m_textToType.toStdU32String();
     m_core->push_input(cmd);
 }
 
@@ -70,6 +80,15 @@ void QmlTypingTrainerAdapter::sendEscape()
     data.timestamp = std::chrono::steady_clock::now();
     m_core->push_input(data);
 }
+
+void QmlTypingTrainerAdapter::uploadCustomText(const QString& text)
+{
+    m_textToType = text;
+    m_formattedText = "<span style='color: #9E9E9E'>" + text + "</span>";
+    emit textToTypeChanged();
+    emit formattedTextChanged();
+}
+
 
 QString QmlTypingTrainerAdapter::sessionStatus() const
 {

@@ -4,7 +4,7 @@
 #include <QString>
 #include <QVariantList>
 #include <memory>
-#include "typing_trainer_core.hpp"
+#include "contracts.hpp"
 
 namespace typing_trainer
 {
@@ -25,6 +25,7 @@ public:
 
     // Методы, доступные для вызова из QML
     Q_INVOKABLE void startSession(const QString& text);
+    Q_INVOKABLE void startFreeSession();
     Q_INVOKABLE void stopSession();
     Q_INVOKABLE void pauseSession();
     Q_INVOKABLE void resumeSession();
@@ -32,6 +33,8 @@ public:
     Q_INVOKABLE void sendKeyPress(const QString& keyText);
     Q_INVOKABLE void sendBackspace();
     Q_INVOKABLE void sendEscape();
+
+    Q_INVOKABLE void uploadCustomText(const QString& text);
 
     // Геттеры для Q_PROPERTY
     QString textToType() const { return m_textToType; }
@@ -58,7 +61,7 @@ private:
     std::unique_ptr<ITypingTrainerCore> m_core;
     
     // Кэш состояния для QML
-    QString m_textToType;
+    QString m_textToType = "He watched as the young man tried to impress everyone in the room with his intelligence. There was no doubt that he was smart.";
     QString m_formattedText;
     int m_cursorPosition = 0;
     double m_wpm = 0.0;
