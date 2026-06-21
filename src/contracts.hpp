@@ -19,6 +19,13 @@ enum class TrainingMode : std::uint8_t
 	Smart ///< Умная генерация текста на основе ошибок и других метрик.
 };
 
+/// \brief Язык для Smart-генерации.
+enum class Language : std::uint8_t
+{
+	English,
+	Russian
+};
+
 enum class CharStatus : std::uint8_t
 {
 	Pending,
@@ -46,6 +53,7 @@ struct SessionConfig
 	TrainingMode   mode;
 	std::u32string custom_text;
 	bool           ignore_case = false;
+	Language       language    = Language::English; ///< Словарь для Smart-режима.
 };
 
 
