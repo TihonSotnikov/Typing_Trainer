@@ -1,5 +1,6 @@
 #include "ngram_statistics.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
@@ -130,6 +131,31 @@ void NgramStatistics::load()
 	{
 		stats_.clear();
 	}
+}
+
+std::vector<WeightedNgram> NgramStatistics::weighted_ngrams() const
+{
+	std::vector<WeightedNgram> result;
+	result.reserve(stats_.size());
+
+	for (auto const& [gram, stat] : stats_)
+	{
+		if (stat.attempts < K_MIN_ATTEMPTS) continue;
+
+		double const t_avg = (stat.occurrences > 0)
+		                         ? stat.total_time / static_cast<double>(stat.occurrences)
+		                         : 0.0;
+		double const error_rate
+		    = static_cast<double>(stat.errors) / static_cast<double>(stat.attempts);
+
+		double const weight = t_avg + (K_ERROR_WEIGHT * error_rate);
+		result.push_back(WeightedNgram{.gram = gram, .weight = weight});
+	}
+
+	std::ranges::sort(
+	    result, [](WeightedNgram const& a, WeightedNgram const& b) { return a.weight > b.weight; });
+
+	return result;
 }
 
 } // namespace typing_trainer
