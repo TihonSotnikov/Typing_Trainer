@@ -28,8 +28,8 @@
 ## 🚀 Быстрый старт
 
 ### Требования
-- Компилятор с поддержкой **C++17** (GCC 10+, Clang 10+, MSVC 19.29+)
-- **CMake** 3.16+
+- Компилятор с поддержкой **C++20** (GCC 16.1+, Clang 17+, MSVC 19.29+)
+- **CMake** 3.21+
 - **Qt 6** (Core, Gui, Widgets)
 
 ### Установка зависимостей на Windows
@@ -51,7 +51,9 @@ vcpkg integrate install
 # Установить Qt6:
 vcpkg install qtbase:x64-windows
 vcpkg install qtdeclarative:x64-windows
-# ^ Это может занять от получаса до нескольких часов
+vcpkg install nlohmann-json
+# ^ Это может занять от получаса до половины суток...
+# ^ Земля пухом тому, кто будет это устанавливать.
 ```
 
 ### Установка зависимостей на Linux
@@ -67,9 +69,11 @@ git clone https://github.com/TihonSotnikov/Blind_Typing_Trainer.git
 cd Blind_Typing_Trainer
 cmake -S source --preset vcpkg-release
 cmake --build build --preset release
+# rm -r dist (если это не первая сборка)
 cmake --install build --config release --prefix "$pwd/dist"
 ./dist/BlindTypingTrainer.exe
 ```
+- Или просто запустить скрипт сборки: `./build-release.ps1`
 
 ---
 

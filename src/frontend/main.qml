@@ -93,14 +93,13 @@ ApplicationWindow {
         Column {
             anchors.centerIn: parent
             spacing: 30
-            width: parent.width * 0.8 // Ограничиваем ширину для демонстрации переноса строк
+            width: parent.width * 0.8
 
-            // Блок текста с цветным курсором
             Item {
                 id: textContainer
                 width: parent.width
                 height: 200
-                clip: true // Ограничиваем видимую область высотой контейнера
+                clip: true
 
                 property bool isEditing: false
 
@@ -117,8 +116,8 @@ ApplicationWindow {
                     visible: !textContainer.isEditing
                     
                     contentWidth: width
-                    contentHeight: textDisplay.contentHeight // Высота контента равна реальной высоте текста
-                    interactive: false // Отключаем ручной скролл, чтобы фокус ввода не сбивался
+                    contentHeight: textDisplay.contentHeight
+                    interactive: false
 
                     // Автоматически рассчитываем координату Y, удерживая курсор по центру экрана
                     property real targetContentY: {
@@ -217,7 +216,7 @@ ApplicationWindow {
                 }
             }
 
-            // Вывод метрик
+            // --- Вывод метрик ---
             Row {
                 spacing: 30
                 anchors.horizontalCenter: parent.horizontalCenter
@@ -231,7 +230,7 @@ ApplicationWindow {
                     font.pointSize: 14; textFormat: Text.RichText
                 }
                 Label {
-                    text: "Cursor: <b>" + trainer.cursorPosition + "</b>"
+                    text: "Cursor: <b>" + trainer.cursorPosition + "</b> / " + trainer.textLength
                     font.pointSize: 14; textFormat: Text.RichText
                 }
             }
@@ -243,6 +242,7 @@ ApplicationWindow {
                 anchors.horizontalCenter: parent.horizontalCenter
             }
 
+            // --- Кнопки управления ---
             Row {
                 spacing: 20
                 anchors.horizontalCenter: parent.horizontalCenter
@@ -280,8 +280,9 @@ ApplicationWindow {
                         if (trainer.sessionStatus === "active") {
                             trainer.stopSession()
                         } else {
+                            if (trainer.smartMode) trainer.startSmartSession()
+                            else trainer.startFreeSession()
                             statusLabel.text = "Печатаем..."
-                            trainer.startFreeSession()
                             blockCursor.visible = true
                             trainerInputField.forceActiveFocus()
                         }
@@ -419,6 +420,105 @@ ApplicationWindow {
                         height: 45
                         items: ["WPM", "CPM"]
                         currentIndex: 0
+                    }
+                }
+            }
+
+            Frame {
+                padding: 20
+                anchors.horizontalCenter: parent.horizontalCenter
+
+                Column {
+                    spacing: 10
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    
+                    Label {
+                        text: "Умный режим"
+                        font.pixelSize: 24
+                        anchors.horizontalCenter: parent.horizontalCenter
+                    }
+                    
+                    Switch {
+                        id: smartModeSwitch
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        checked: trainer.smartMode
+
+                        onCheckedChanged: {
+                            trainer.smartMode = checked
+                        }
+                    }
+
+                    Row {
+                        spacing: 5
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        visible: trainer.smartMode
+
+                        Label {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: "Язык текста"
+                            font.pixelSize: 18
+                        }
+
+                        XSegmentedControl {
+                            id: languageControl
+                            anchors.verticalCenter: parent.verticalCenter
+                            height: 45
+                            items: ["English", "Russian"]
+
+                            onCurrentTextChanged: {
+                                trainer.language = currentText
+                            }
+                        }
+                    }
+
+                    Row {
+                        spacing: 5
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        visible: trainer.smartMode
+                        Label {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: "Filler Ratio"
+                            font.pixelSize: 18
+                        }
+
+                        Slider {
+                            id: fillerRatioSlider
+                            anchors.verticalCenter: parent.verticalCenter
+                            from: 0
+                            to: 1
+                            stepSize: 0.05
+                            value: trainer.fillerRatio
+                            width: 200
+
+                            onValueChanged: {
+                                trainer.fillerRatio = value
+                            }
+                        }
+                    }
+
+                    Row {
+                        spacing: 5
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        visible: trainer.smartMode
+                        Label {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: "Длина текста"
+                            font.pixelSize: 18
+                        }
+
+                        SpinBox {
+                            id: targetLengthSpinBox
+                            anchors.verticalCenter: parent.verticalCenter
+                            from: 50
+                            to: 1000
+                            stepSize: 50
+                            value: trainer.targetLength
+                            width: 100
+
+                            onValueChanged: {
+                                trainer.targetLength = value
+                            }
+                        }
                     }
                 }
             }

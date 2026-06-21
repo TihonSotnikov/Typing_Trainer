@@ -16,13 +16,17 @@ QmlTypingTrainerAdapter::QmlTypingTrainerAdapter(QObject* parent)
         // чтобы безопасно перенаправить выполнение метода onOutputReady в UI-поток Qt.
         QMetaObject::invokeMethod(this, "onOutputReady", Qt::QueuedConnection);
     });
+
+    m_textLength = m_textToType.length();
 }
 
 void QmlTypingTrainerAdapter::startSession(const QString& text)
 {
     if (m_textToType != text) {
         m_textToType = text;
+        m_textLength = text.length();
         emit textToTypeChanged();
+        emit textLengthChanged();
     }
 
     StartSessionCommand cmd;
@@ -37,6 +41,16 @@ void QmlTypingTrainerAdapter::startFreeSession()
     StartSessionCommand cmd;
     cmd.config.mode = TrainingMode::Free;
     cmd.config.custom_text = m_textToType.toStdU32String();
+    m_core->push_input(cmd);
+}
+
+void QmlTypingTrainerAdapter::startSmartSession()
+{
+    StartSessionCommand cmd;
+    cmd.config.mode = TrainingMode::Smart;
+    cmd.config.language = m_language;
+    cmd.config.filler_ratio = m_fillerRatio;
+    cmd.config.target_length = m_targetLength;
     m_core->push_input(cmd);
 }
 
@@ -85,8 +99,10 @@ void QmlTypingTrainerAdapter::uploadCustomText(const QString& text)
 {
     m_textToType = text;
     m_formattedText = "<span style='color: #9E9E9E'>" + text + "</span>";
+    m_textLength = text.length();
     emit textToTypeChanged();
     emit formattedTextChanged();
+    emit textLengthChanged();
 }
 
 
@@ -105,6 +121,38 @@ QString QmlTypingTrainerAdapter::sessionStatusToString(SessionStatus status) con
         case SessionStatus::Completed: return QStringLiteral("completed");
     }
     return QStringLiteral("inactive");
+}
+
+QString QmlTypingTrainerAdapter::language() const
+{
+    switch (m_language)
+    {
+        case Language::English: return QStringLiteral("English");
+        case Language::Russian: return QStringLiteral("Russian");
+    }
+    return QStringLiteral("English");
+}
+
+void QmlTypingTrainerAdapter::setLanguage(const QString& lang)
+{
+    if (lang == "English") {
+        m_language = Language::English;
+    } else if (lang == "Russian") {
+        m_language = Language::Russian;
+    }
+    emit languageChanged();
+}
+
+void QmlTypingTrainerAdapter::setFillerRatio(double ratio)
+{
+    m_fillerRatio = ratio;
+    emit fillerRatioChanged();
+}
+
+void QmlTypingTrainerAdapter::setTargetLength(uint length)
+{
+    m_targetLength = length;
+    emit targetLengthChanged();
 }
 
 void QmlTypingTrainerAdapter::updateFormattedText()
