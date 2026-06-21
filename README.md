@@ -63,7 +63,8 @@ vcpkg install qtbase:x64-windows qtdeclarative:x64-windows nlohmann-json:x64-win
 # ^ Земля пухом тому, кто будет это устанавливать.
 cmake --preset vcpkg-release
 cmake --build --preset release
-cmake --install build/vcpkg-release --prefix dist
+rm -r dist # Если следующая команда уже запускалась
+cmake --install build/vcpkg-release --prefix "$pwd/dist"
 ```
 
 **Linux:**
