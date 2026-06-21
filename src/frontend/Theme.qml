@@ -43,7 +43,7 @@ Item {
     readonly property color accent: {
         switch (currentTheme) {
             case "dark": return '#006199'
-            case "black": return '#2e1f49'
+            case "black": return '#6645a3'
             case "blue": return '#2e8d9e'
             default:     return '#3ea1e2'
         }

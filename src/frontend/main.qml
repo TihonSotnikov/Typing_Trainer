@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
+import QtQuick.Effects
 import BlindTypingTrainerModule 1.0
 
 ApplicationWindow {
@@ -26,6 +27,16 @@ ApplicationWindow {
         id: trainer
         onSessionCompleted: {
             statusLabel.text = "Session Completed!"
+            blockCursor.visible = false
+        }
+        onSessionStatusChanged: {
+            if (trainer.sessionStatus === "paused") {
+                statusLabel.text = "Session Paused"
+                pauseFade.visible = true
+            } else if (trainer.sessionStatus === "active") {
+                statusLabel.text = "Typing..."
+                pauseFade.visible = false
+            }
         }
     }
 
@@ -34,7 +45,6 @@ ApplicationWindow {
         anchors.fill: parent
         initialItem: mainScreen
 
-        // Новый экран плавно появляется из прозрачности
         pushEnter: Transition {
             PropertyAnimation {
                 property: "opacity"
@@ -43,8 +53,6 @@ ApplicationWindow {
                 duration: 250 // Длительность в миллисекундах
             }
         }
-
-        // Старый экран плавно исчезает
         pushExit: Transition {
             PropertyAnimation {
                 property: "opacity"
@@ -53,8 +61,6 @@ ApplicationWindow {
                 duration: 250
             }
         }
-
-        // Экран, на который мы возвращаемся, плавно проявляется
         popEnter: Transition {
             PropertyAnimation {
                 property: "opacity"
@@ -63,8 +69,6 @@ ApplicationWindow {
                 duration: 250
             }
         }
-
-        // Экран, с которого мы уходим, плавно исчезает
         popExit: Transition {
             PropertyAnimation {
                 property: "opacity"
@@ -73,10 +77,16 @@ ApplicationWindow {
                 duration: 250
             }
         }
+        
+        onCurrentItemChanged: {
+            if (currentItem) {
+                currentItem.forceActiveFocus();
+            }
+        }
     }
 
 
-    Item {
+    FocusScope {
         id: mainScreen
         visible: true
 
@@ -87,8 +97,12 @@ ApplicationWindow {
 
             // Блок текста с цветным курсором
             Item {
+                id: textContainer
                 width: parent.width
                 height: 200
+                clip: true // Ограничиваем видимую область высотой контейнера
+
+                property bool isEditing: false
 
                 // Утилита для получения ширины символов шрифта
                 FontMetrics {
@@ -96,42 +110,109 @@ ApplicationWindow {
                     font: textDisplay.font
                 }
 
-                TextEdit {
-                    id: textDisplay
+                // Область просмотра для длинного текста
+                Flickable {
+                    id: textFlickable
                     anchors.fill: parent
-                    text: trainer.textToType
-                    textFormat: TextEdit.RichText
+                    visible: !textContainer.isEditing
+                    
+                    contentWidth: width
+                    contentHeight: textDisplay.contentHeight // Высота контента равна реальной высоте текста
+                    interactive: false // Отключаем ручной скролл, чтобы фокус ввода не сбивался
 
-                    font.pointSize: 24
-                    font.family: "Courier New"
-                    wrapMode: TextEdit.WordWrap
-                    readOnly: true
-                    selectByMouse: false
-                    cursorPosition: trainer.cursorPosition
-                    cursorVisible: false
+                    // Автоматически рассчитываем координату Y, удерживая курсор по центру экрана
+                    property real targetContentY: {
+                        if (!blockCursor.visible) return 0;
+                        
+                        let curY = textDisplay.cursorRectangle.y;
+                        let curH = textDisplay.cursorRectangle.height || fontMetrics.height;
+                        
+                        // Вычисляем позицию, при которой курсор окажется строго по центру высоты Flickable
+                        let target = curY - (height / 2) + (curH / 2);
+                        
+                        // Ограничиваем прокрутку, чтобы не выходить за рамки текста
+                        let maxScroll = Math.max(0, contentHeight - height);
+                        return Math.max(0, Math.min(target, maxScroll));
+                    }
+
+                    contentY: targetContentY
+
+                    // Плавный переход при изменении положения прокрутки
+                    Behavior on contentY {
+                        NumberAnimation { duration: 200; easing.type: Easing.OutQuad }
+                    }
+
+                    TextEdit {
+                        id: textDisplay
+                        width: parent.width
+                        height: contentHeight // Привязываем высоту к внутреннему контенту, чтобы Flickable знал реальный размер
+
+                        text: trainer.formattedText
+                        textFormat: TextEdit.RichText
+
+                        font.pointSize: 24
+                        font.family: "Courier New"
+                        wrapMode: TextEdit.WordWrap
+                        readOnly: true
+                        selectByMouse: false
+                        cursorPosition: trainer.cursorPosition
+                        cursorVisible: false
+                        activeFocusOnPress: false
+                    }
+
+                    // Цветной курсор (теперь находится внутри Flickable, чтобы двигаться вместе с текстом)
+                    Rectangle {
+                        id: blockCursor
+                        color: "#4CAF50"
+                        opacity: 0.4
+                        radius: 4
+                        visible: false
+
+                        // Привязываем позицию к системному курсору внутри TextEdit
+                        x: textDisplay.cursorRectangle.x
+                        y: textDisplay.cursorRectangle.y
+
+                        // Высота равна высоте строки, а ширина - средней ширине символа
+                        width: fontMetrics.averageCharacterWidth
+                        height: textDisplay.cursorRectangle.height || fontMetrics.height
+
+                        // Плавная анимация перемещения курсора
+                        Behavior on x {
+                            NumberAnimation { duration: 80; easing.type: Easing.OutQuad }
+                        }
+                        Behavior on y {
+                            NumberAnimation { duration: 150; easing.type: Easing.InOutQuad }
+                        }
+                    }
                 }
 
-                // Цветной курсор
-                Rectangle {
-                    id: blockCursor
-                    color: "#4CAF50"
-                    opacity: 0.4
-                    radius: 4
+                Loader {
+                    id: editorLoader
+                    anchors.fill: parent
+                    active: textContainer.isEditing    // Создается в памяти только при редактировании
+                    visible: textContainer.isEditing   // Отображается только при редактировании
 
-                    // Привязываем позицию к невидимому системному курсору внутри TextEdit
-                    x: textDisplay.cursorRectangle.x
-                    y: textDisplay.cursorRectangle.y
+                    sourceComponent: ScrollView {
+                        // Псевдоним для доступа к тексту извне через editorLoader.item.text
+                        property alias text: editingTextArea.text
+                        anchors.fill: parent
 
-                    // Высота равна высоте строки, а ширина - средней ширине символа
-                    width: fontMetrics.averageCharacterWidth
-                    height: textDisplay.cursorRectangle.height || fontMetrics.height
+                        TextArea {
+                            id: editingTextArea
+                            text: trainer.textToType 
+                            textFormat: TextEdit.PlainText
 
-                    // Добавляем плавную анимацию перемещения
-                    Behavior on x {
-                        NumberAnimation { duration: 80; easing.type: Easing.OutQuad }
-                    }
-                    Behavior on y {
-                        NumberAnimation { duration: 150; easing.type: Easing.InOutQuad }
+                            font.pointSize: 20
+                            font.family: "Courier New"
+                            wrapMode: TextArea.WordWrap
+                            
+                            readOnly: false
+                            selectByMouse: true
+                            cursorVisible: true
+                            activeFocusOnPress: true
+
+                            Component.onCompleted: forceActiveFocus()
+                        }
                     }
                 }
             }
@@ -174,41 +255,110 @@ ApplicationWindow {
                 }
 
                 XButton {
-                    text: "Старт"
+                    id: editButton
+                    enabled: trainer.sessionStatus === "inactive" || trainer.sessionStatus === "completed"
+                    text: "Редактировать"
                     onClicked: {
-                        statusLabel.text = "Печатаем..."
-                        // Длинный текст для проверки переноса строк и работы курсора по Y
-                        trainer.startSession("This is a long example text for training your blind typing skills. The cursor will smoothly follow your progress and jump to the next line automatically.")
-                        inputField.forceActiveFocus()
+                        if (!textContainer.isEditing) {
+                            textContainer.isEditing = true
+                            editButton.text = "Готово"
+                        } else {
+                            trainer.uploadCustomText(editorLoader.item.text)
+                            textContainer.isEditing = false
+                            editButton.text = "Редактировать"
+                        }
+                    }
+                }
+
+                XButton {
+                    id: startButton
+                    enabled: !textContainer.isEditing
+                    text: trainer.sessionStatus === "active" || trainer.sessionStatus === "paused"
+                        ? "Завершить"
+                        : "Старт"
+                    onClicked: {
+                        if (trainer.sessionStatus === "active") {
+                            trainer.stopSession()
+                        } else {
+                            statusLabel.text = "Печатаем..."
+                            trainer.startFreeSession()
+                            blockCursor.visible = true
+                            trainerInputField.forceActiveFocus()
+                        }
                     }
                 }
             }
 
-            // 3. Невидимое поле для перехвата клавиатуры
-            Item {
-                id: inputField
-                focus: true
-                Keys.onPressed: (event) => {
-                    if (event.key === Qt.Key_Backspace) {
+            Label {
+                text: `Status: ${trainer.sessionStatus}`
+                font.pointSize: 10
+                anchors.horizontalCenter: parent.horizontalCenter
+            }
+        }
+
+        Rectangle {
+            id: pauseFade
+            visible: false
+            anchors.fill: parent
+
+            color: "#ffffff"
+            opacity: 0.6
+
+            Label {
+                id: pauseLabel
+                anchors.centerIn: parent
+
+                text: "Пауза"
+                font.pointSize: 36
+                font.bold: true
+                color: "#1a1a1a"
+            }
+        }
+
+        Item {
+            id: trainerInputField
+            focus: true
+            
+            onActiveFocusChanged: {
+                let isCurrentScreen = (stackView.currentItem === mainScreen);
+                let isSessionRunning = (trainer.sessionStatus === "active" || trainer.sessionStatus === "paused");
+
+                if (!activeFocus && isSessionRunning && isCurrentScreen && !textContainer.isEditing) {
+                    trainerInputField.forceActiveFocus();
+                }
+            }
+
+            Keys.onPressed: (event) => {
+                if (trainer.sessionStatus !== "active" && trainer.sessionStatus !== "paused") {
+                    return;
+                }
+
+                if (event.key === Qt.Key_Backspace) {
+                    if (trainer.sessionStatus === "active") {
                         trainer.sendBackspace();
-                        event.accepted = true;
-                    } else if (event.key === Qt.Key_Escape) {
-                        trainer.stopSession();
-                        statusLabel.text = "Сессия остановлена"
-                        event.accepted = true;
-                    } else if (event.text.length > 0) {
+                    }
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_Escape) {
+                    if (trainer.sessionStatus === "active") {
+                        trainer.sendEscape();
+                    } else if (trainer.sessionStatus === "paused") {
+                        trainer.resumeSession();
+                    }
+                    event.accepted = true;
+                } else if (event.text.length > 0) {
+                    if (trainer.sessionStatus === "active") {
                         // Превращаем \r в \n на стороне фронта
                         let charToSend = event.text === "\r" ? "\n" : event.text;
                         trainer.sendKeyPress(charToSend);
-                        event.accepted = true;
                     }
+                    event.accepted = true;
                 }
             }
         }
     }
 
 
-    Item {
+    FocusScope {
         id: settingsScreen
         visible: false
 
@@ -255,6 +405,24 @@ ApplicationWindow {
                 }
             }
 
+            Frame {
+                padding: 20
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: parent.implicitWidth
+
+                Row {
+                    spacing: 5
+                    anchors.horizontalCenter: parent.horizontalCenter
+
+                    XSegmentedControl {
+                        id: metricControl
+                        height: 45
+                        items: ["WPM", "CPM"]
+                        currentIndex: 0
+                    }
+                }
+            }
+
             // Настройки END
 
             XButton {
@@ -263,6 +431,27 @@ ApplicationWindow {
                 onClicked: {
                     stackView.pop()
                 }
+            }
+        }
+
+        Item {
+            id: settingsInputField
+            anchors.fill: parent
+            focus: true
+            
+            onActiveFocusChanged: {
+                let isCurrentScreen = (stackView.currentItem === settingsScreen);
+
+                if (!activeFocus && isCurrentScreen) {
+                    settingsInputField.forceActiveFocus();
+                }
+            }
+
+            Keys.onPressed: (event) => {
+                if (event.key === Qt.Key_Escape) {
+                    stackView.pop();
+                }
+                event.accepted = true;
             }
         }
     }

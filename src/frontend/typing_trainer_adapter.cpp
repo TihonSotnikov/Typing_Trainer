@@ -1,4 +1,5 @@
 #include "typing_trainer_adapter.hpp"
+#include "typing_trainer_core.hpp"
 #include <QMetaObject>
 
 namespace typing_trainer
@@ -19,15 +20,39 @@ QmlTypingTrainerAdapter::QmlTypingTrainerAdapter(QObject* parent)
 
 void QmlTypingTrainerAdapter::startSession(const QString& text)
 {
+    if (m_textToType != text) {
+        m_textToType = text;
+        emit textToTypeChanged();
+    }
+
     StartSessionCommand cmd;
     cmd.config.mode = TrainingMode::Free;
     cmd.config.custom_text = text.toStdU32String();
     m_core->push_input(cmd);
 }
 
+
+void QmlTypingTrainerAdapter::startFreeSession()
+{
+    StartSessionCommand cmd;
+    cmd.config.mode = TrainingMode::Free;
+    cmd.config.custom_text = m_textToType.toStdU32String();
+    m_core->push_input(cmd);
+}
+
 void QmlTypingTrainerAdapter::stopSession()
 {
     m_core->push_input(StopSessionCommand{});
+}
+
+void QmlTypingTrainerAdapter::pauseSession()
+{
+    m_core->push_input(PauseSessionCommand{});
+}
+
+void QmlTypingTrainerAdapter::resumeSession()
+{
+    m_core->push_input(ResumeSessionCommand{});
 }
 
 void QmlTypingTrainerAdapter::sendKeyPress(const QString& keyText)
@@ -46,6 +71,40 @@ void QmlTypingTrainerAdapter::sendBackspace()
     data.key = ControlKey::Backspace;
     data.timestamp = std::chrono::steady_clock::now();
     m_core->push_input(data);
+}
+
+void QmlTypingTrainerAdapter::sendEscape()
+{
+    KeyPressData data;
+    data.key = ControlKey::Escape;
+    data.timestamp = std::chrono::steady_clock::now();
+    m_core->push_input(data);
+}
+
+void QmlTypingTrainerAdapter::uploadCustomText(const QString& text)
+{
+    m_textToType = text;
+    m_formattedText = "<span style='color: #9E9E9E'>" + text + "</span>";
+    emit textToTypeChanged();
+    emit formattedTextChanged();
+}
+
+
+QString QmlTypingTrainerAdapter::sessionStatus() const
+{
+    return sessionStatusToString(m_sessionStatus);
+}
+
+QString QmlTypingTrainerAdapter::sessionStatusToString(SessionStatus status) const
+{
+    switch (status)
+    {
+        case SessionStatus::Inactive:  return QStringLiteral("inactive");
+        case SessionStatus::Active:    return QStringLiteral("active");
+        case SessionStatus::Paused:    return QStringLiteral("paused");
+        case SessionStatus::Completed: return QStringLiteral("completed");
+    }
+    return QStringLiteral("inactive");
 }
 
 void QmlTypingTrainerAdapter::updateFormattedText()
@@ -76,7 +135,7 @@ void QmlTypingTrainerAdapter::updateFormattedText()
                 break;
             case CharStatus::Wrong:
                 // ВАЖНО: Если пользователь ошибся на пробеле, красный текст не будет видно.
-                // Поэтому для пробелов мы подсвечиваем фон!
+                // Поэтому для пробелов подсвечиваем фон.
                 if (state.character == U' ') {
                     html += "<span style='background-color: #EF9A9A'> </span>";
                 } else {
@@ -86,9 +145,9 @@ void QmlTypingTrainerAdapter::updateFormattedText()
         }
     }
 
-    if (m_textToType != html) {
-        m_textToType = html;
-        emit textToTypeChanged();
+    if (m_formattedText != html) {
+        m_formattedText = html;
+        emit formattedTextChanged();
     }
 }
 
@@ -107,9 +166,11 @@ void QmlTypingTrainerAdapter::onOutputReady()
                 m_cursorPosition = static_cast<int>(arg.cursor_position);
                 m_wpm = arg.metrics.wpm;
                 m_accuracy = arg.metrics.accuracy;
+                m_sessionStatus = arg.status;
                 
                 emit cursorPositionChanged();
                 emit metricsChanged();
+                emit sessionStatusChanged();
             }
             else if constexpr (std::is_same_v<T, StateUpdate>)
             {
@@ -122,10 +183,11 @@ void QmlTypingTrainerAdapter::onOutputReady()
                 m_cursorPosition = static_cast<int>(arg.cursor_position);
                 m_wpm = arg.metrics.wpm;
                 m_accuracy = arg.metrics.accuracy;
-                
+                m_sessionStatus = arg.status;
                 emit cursorPositionChanged();
                 emit metricsChanged();
-                
+                emit sessionStatusChanged();
+
                 if (arg.is_completed) {
                     emit sessionCompleted();
                 }
