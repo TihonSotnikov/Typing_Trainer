@@ -3,6 +3,7 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <nlohmann/json_fwd.hpp> // NOLINT(misc-include-cleaner)
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -48,6 +49,14 @@ public:
 	///       старт сессии, backspace, возобновление после паузы.
 	void reset_context();
 
+	/// \brief Сохранить накопленную статистику в JSON-файл.
+	void save() const;
+
+	/// \brief Загрузить статистику из JSON-файла.
+	/// \note Отсутствие, повреждение или несовместимость по версии не считаются ошибкой:
+	///       статистика просто остаётся пустой.
+	void load();
+
 private:
 	/// \brief Записать наблюдение во все n-граммы (1..3), оканчивающиеся на expected.
 	void accumulate(char32_t expected, std::optional<double> flight_sec, bool correct);
@@ -56,8 +65,13 @@ private:
 	static constexpr std::size_t K_MAX_CONTEXT        = 2;   ///< До 2 символов слева -> n до 3.
 
 	std::unordered_map<std::u32string, NgramStat> stats_;
-	std::u32string                                context_; ///< До kmaxcontext последних expected.
+	std::u32string                                context_; ///< До K_MAX_CONTEXT последних expected.
 	std::optional<std::chrono::steady_clock::time_point> last_ts_;
 };
+
+/// \note Для nlohmann.
+void to_json(nlohmann::json& j, const NgramStat& stat);
+/// \note Для nlohmann.
+void from_json(const nlohmann::json& j, NgramStat& stat);
 
 } // namespace typing_trainer

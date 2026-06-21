@@ -2,11 +2,41 @@
 
 #include <chrono>
 #include <cstddef>
+#include <cstdint>
+#include <exception>
+#include <fstream>
+#include <nlohmann/json_fwd.hpp>
 #include <optional>
 #include <string>
+#include <utility>
+#include <vector>
+
+#include <nlohmann/json.hpp>
+
+namespace
+{
+
+constexpr int         K_SCHEMA_VERSION  = 1;
+constexpr const char* K_STATS_FILE_PATH = "ngram_stats.json";
+
+} // namespace
 
 namespace typing_trainer
 {
+
+void to_json(nlohmann::json& j, const NgramStat& stat)
+{
+	j = nlohmann::json{{"occurrences", stat.occurrences},
+	                   {"total_time", stat.total_time},
+	                   {"errors", stat.errors}};
+}
+
+void from_json(const nlohmann::json& j, NgramStat& stat)
+{
+	j.at("occurrences").get_to(stat.occurrences);
+	j.at("total_time").get_to(stat.total_time);
+	j.at("errors").get_to(stat.errors);
+}
 
 void NgramStatistics::feed(char32_t expected, std::chrono::steady_clock::time_point timestamp,
                            bool correct)
@@ -55,6 +85,48 @@ void NgramStatistics::reset_context()
 {
 	context_.clear();
 	last_ts_.reset();
+}
+
+void NgramStatistics::save() const
+{
+	nlohmann::json ngrams = nlohmann::json::array();
+	for (auto const& [gram, stat] : stats_)
+	{
+		nlohmann::json entry = stat;
+		entry["gram"]        = std::vector<std::uint32_t>(gram.begin(), gram.end());
+		ngrams.push_back(std::move(entry));
+	}
+
+	nlohmann::json root;
+	root["version"] = K_SCHEMA_VERSION;
+	root["ngrams"]  = std::move(ngrams);
+
+	std::ofstream file(K_STATS_FILE_PATH);
+	if (file) file << root.dump(2);
+}
+
+void NgramStatistics::load()
+{
+	std::ifstream file(K_STATS_FILE_PATH);
+	if (!file) return;
+
+	try
+	{
+		nlohmann::json const root = nlohmann::json::parse(file);
+		if (root.value("version", 0) != K_SCHEMA_VERSION) return;
+
+		stats_.clear();
+		for (auto const& entry : root.at("ngrams"))
+		{
+			auto const           code_points = entry.at("gram").get<std::vector<std::uint32_t>>();
+			std::u32string const gram(code_points.begin(), code_points.end());
+			stats_[gram] = entry.get<NgramStat>();
+		}
+	}
+	catch (std::exception const&)
+	{
+		stats_.clear();
+	}
 }
 
 } // namespace typing_trainer

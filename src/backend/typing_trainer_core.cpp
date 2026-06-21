@@ -33,6 +33,8 @@ void TypingTrainerCore::set_output_ready_callback(std::function<void()> callback
 
 void TypingTrainerCore::process_loop(const std::stop_token& stop_token)
 {
+	ngram_stats_.load();
+
 	while (!stop_token.stop_requested())
 	{
 		auto event_opt = input_queue_.wait_and_pop(stop_token);
@@ -92,6 +94,8 @@ void TypingTrainerCore::stop_session()
 	text_to_type_.clear();
 	cursor_               = 0;
 	accumulated_duration_ = std::chrono::steady_clock::duration::zero();
+
+	ngram_stats_.save();
 
 	SessionState empty_state{
 	    .chars           = chars_,
@@ -197,7 +201,11 @@ void TypingTrainerCore::process_key_press(const KeyPressData& key_data)
 
 		bool const is_completed = (cursor_ == text_to_type_.size() - 1);
 
-		if (is_completed) status_ = SessionStatus::Completed;
+		if (is_completed)
+		{
+			status_ = SessionStatus::Completed;
+			ngram_stats_.save();
+		}
 
 		StateUpdate update{.changed_index   = cursor_,
 		                   .changed_char    = chars_.at(cursor_),
