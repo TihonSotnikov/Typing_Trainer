@@ -18,6 +18,7 @@ class QmlTypingTrainerAdapter : public QObject
     Q_PROPERTY(int textLength READ textLength NOTIFY textLengthChanged)
     Q_PROPERTY(int cursorPosition READ cursorPosition NOTIFY cursorPositionChanged)
     Q_PROPERTY(double wpm READ wpm NOTIFY metricsChanged)
+    Q_PROPERTY(double cpm READ cpm NOTIFY metricsChanged)
     Q_PROPERTY(double accuracy READ accuracy NOTIFY metricsChanged)
     Q_PROPERTY(QString sessionStatus READ sessionStatus NOTIFY sessionStatusChanged)
 
@@ -49,6 +50,7 @@ public:
     int textLength() const { return m_textLength; }
     int cursorPosition() const { return m_cursorPosition; }
     double wpm() const { return m_wpm; }
+    double cpm() const { return m_cpm; }
     double accuracy() const { return m_accuracy; }
     QString sessionStatus() const;
 
@@ -101,6 +103,7 @@ private:
     int m_textLength = 0;
     int m_cursorPosition = 0;
     double m_wpm = 0.0;
+    double m_cpm = 0.0;
     double m_accuracy = 100.0;
     SessionStatus m_sessionStatus = SessionStatus::Inactive;
     

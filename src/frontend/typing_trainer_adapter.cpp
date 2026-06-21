@@ -209,6 +209,7 @@ void QmlTypingTrainerAdapter::onOutputReady()
             if constexpr (std::is_same_v<T, SessionState>)
             {
                 m_charStates = arg.chars; // Сохраняем массив
+                m_textLength = m_charStates.size();
                 updateFormattedText();    // Генерируем HTML строку
                 
                 m_cursorPosition = static_cast<int>(arg.cursor_position);
@@ -230,6 +231,7 @@ void QmlTypingTrainerAdapter::onOutputReady()
                 
                 m_cursorPosition = static_cast<int>(arg.cursor_position);
                 m_wpm = arg.metrics.wpm;
+                m_cpm = arg.metrics.cpm;
                 m_accuracy = arg.metrics.accuracy;
                 m_sessionStatus = arg.status;
                 emit cursorPositionChanged();
@@ -237,6 +239,8 @@ void QmlTypingTrainerAdapter::onOutputReady()
                 emit sessionStatusChanged();
 
                 if (arg.is_completed) {
+                    m_cursorPosition++;
+                    emit cursorPositionChanged();
                     emit sessionCompleted();
                 }
             }

@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Effects
+import QtQuick.Layouts
 import BlindTypingTrainerModule 1.0
 
 ApplicationWindow {
@@ -222,6 +223,10 @@ ApplicationWindow {
                 anchors.horizontalCenter: parent.horizontalCenter
 
                 Label {
+                    text: "CPM: <font color='#c9a401'><b>" + trainer.cpm.toFixed(1) + "</b></font>"
+                    font.pointSize: 14; textFormat: Text.RichText
+                }
+                Label {
                     text: "WPM: <font color='#2196F3'><b>" + trainer.wpm.toFixed(1) + "</b></font>"
                     font.pointSize: 14; textFormat: Text.RichText
                 }
@@ -363,173 +368,189 @@ ApplicationWindow {
         id: settingsScreen
         visible: false
 
-        Column {
-            anchors.centerIn: parent
-            spacing: 20
+        ScrollView {
+            id: settingsScrollView
+            anchors.fill: parent
+            clip: true
+            contentWidth: availableWidth 
 
-            Label {
-                text: "Настройки"
-                font.pointSize: 24
-                font.bold: true
+            Column {
                 anchors.horizontalCenter: parent.horizontalCenter
-            }
+                y: Math.max(20, (settingsScrollView.height - height) / 2)
 
-            // Настройки BEGIN
+                spacing: 30
+                bottomPadding: 30
 
-            Frame {
-                padding: 20
+                Label {
+                    text: "Настройки"
+                    font.pointSize: 24
+                    font.bold: true
+                    anchors.horizontalCenter: parent.horizontalCenter
+                }
 
-                Column {
-                    Label {
-                        text: "Темы"
-                        font.pixelSize: 24
-                        anchors.horizontalCenter: parent.horizontalCenter
+                // Настройки BEGIN
+
+                Frame {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    padding: 30
+
+                    Column {
+                        Label {
+                            text: "Темы"
+                            font.pixelSize: 24
+                            anchors.horizontalCenter: parent.horizontalCenter
+                        }
+
+                        Row {
+                            spacing: 10
+                            anchors.horizontalCenter: parent.horizontalCenter
+
+                            XButton {
+                                text: "Светлая"
+                                onClicked: Theme.currentTheme = "light"
+                            }
+                            XButton {
+                                text: "Тёмная"
+                                onClicked: Theme.currentTheme = "dark"
+                            }
+                            XButton {
+                                text: "Чёрная"
+                                onClicked: Theme.currentTheme = "black"
+                            }
+                        }
                     }
+                }
 
-                    Row {
+                // Frame {
+                //     padding: 30
+                //     anchors.horizontalCenter: parent.horizontalCenter
+                //     width: parent.implicitWidth
+
+                //     Row {
+                //         spacing: 5
+                //         anchors.horizontalCenter: parent.horizontalCenter
+
+                //         XSegmentedControl {
+                //             id: metricControl
+                //             height: 45
+                //             items: ["WPM", "CPM"]
+                //             currentIndex: 0
+                //         }
+                //     }
+                // }
+
+                Frame {
+                    padding: 30
+                    anchors.horizontalCenter: parent.horizontalCenter
+
+                    ColumnLayout {
                         spacing: 10
                         anchors.horizontalCenter: parent.horizontalCenter
+                        
+                        Label {
+                            text: "Умный режим"
+                            font.pixelSize: 24
+                            anchors.horizontalCenter: parent.horizontalCenter
+                        }
+                        
+                        Switch {
+                            id: smartModeSwitch
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            checked: trainer.smartMode
 
-                        XButton {
-                            text: "Светлая"
-                            onClicked: Theme.currentTheme = "light"
+                            onCheckedChanged: {
+                                trainer.smartMode = checked
+                            }
+
+                            Layout.bottomMargin: 10
                         }
-                        XButton {
-                            text: "Тёмная"
-                            onClicked: Theme.currentTheme = "dark"
+
+                        Row {
+                            spacing: 10
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            visible: trainer.smartMode
+
+                            Label {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: "Язык текста"
+                                font.pixelSize: 18
+                            }
+
+                            XSegmentedControl {
+                                id: languageControl
+                                anchors.verticalCenter: parent.verticalCenter
+                                height: 45
+                                items: ["English", "Russian"]
+
+                                onCurrentTextChanged: {
+                                    trainer.language = currentText
+                                }
+                            }
                         }
-                        XButton {
-                            text: "Чёрная"
-                            onClicked: Theme.currentTheme = "black"
+
+                        Row {
+                            spacing: 10
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            visible: trainer.smartMode
+                            Label {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: "Filler Ratio"
+                                font.pixelSize: 18
+                            }
+
+                            Slider {
+                                id: fillerRatioSlider
+                                anchors.verticalCenter: parent.verticalCenter
+                                from: 0
+                                to: 1
+                                stepSize: 0.05
+                                value: trainer.fillerRatio
+                                width: 200
+
+                                onValueChanged: {
+                                    trainer.fillerRatio = value
+                                }
+                            }
+                        }
+
+                        Row {
+                            spacing: 10
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            visible: trainer.smartMode
+                            Label {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: "Длина текста"
+                                font.pixelSize: 18
+                            }
+
+                            SpinBox {
+                                id: targetLengthSpinBox
+                                anchors.verticalCenter: parent.verticalCenter
+
+                                from: 50
+                                to: 1000
+                                stepSize: 50
+                                value: trainer.targetLength
+
+                                width: 150
+                                height: 30
+
+                                onValueChanged: {
+                                    trainer.targetLength = value
+                                }
+                            }
                         }
                     }
                 }
-            }
 
-            Frame {
-                padding: 20
-                anchors.horizontalCenter: parent.horizontalCenter
-                width: parent.implicitWidth
+                // Настройки END
 
-                Row {
-                    spacing: 5
+                XButton {
+                    text: "Готово"
                     anchors.horizontalCenter: parent.horizontalCenter
-
-                    XSegmentedControl {
-                        id: metricControl
-                        height: 45
-                        items: ["WPM", "CPM"]
-                        currentIndex: 0
+                    onClicked: {
+                        stackView.pop()
                     }
-                }
-            }
-
-            Frame {
-                padding: 20
-                anchors.horizontalCenter: parent.horizontalCenter
-
-                Column {
-                    spacing: 10
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    
-                    Label {
-                        text: "Умный режим"
-                        font.pixelSize: 24
-                        anchors.horizontalCenter: parent.horizontalCenter
-                    }
-                    
-                    Switch {
-                        id: smartModeSwitch
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        checked: trainer.smartMode
-
-                        onCheckedChanged: {
-                            trainer.smartMode = checked
-                        }
-                    }
-
-                    Row {
-                        spacing: 5
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        visible: trainer.smartMode
-
-                        Label {
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: "Язык текста"
-                            font.pixelSize: 18
-                        }
-
-                        XSegmentedControl {
-                            id: languageControl
-                            anchors.verticalCenter: parent.verticalCenter
-                            height: 45
-                            items: ["English", "Russian"]
-
-                            onCurrentTextChanged: {
-                                trainer.language = currentText
-                            }
-                        }
-                    }
-
-                    Row {
-                        spacing: 5
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        visible: trainer.smartMode
-                        Label {
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: "Filler Ratio"
-                            font.pixelSize: 18
-                        }
-
-                        Slider {
-                            id: fillerRatioSlider
-                            anchors.verticalCenter: parent.verticalCenter
-                            from: 0
-                            to: 1
-                            stepSize: 0.05
-                            value: trainer.fillerRatio
-                            width: 200
-
-                            onValueChanged: {
-                                trainer.fillerRatio = value
-                            }
-                        }
-                    }
-
-                    Row {
-                        spacing: 5
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        visible: trainer.smartMode
-                        Label {
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: "Длина текста"
-                            font.pixelSize: 18
-                        }
-
-                        SpinBox {
-                            id: targetLengthSpinBox
-                            anchors.verticalCenter: parent.verticalCenter
-                            from: 50
-                            to: 1000
-                            stepSize: 50
-                            value: trainer.targetLength
-                            width: 100
-
-                            onValueChanged: {
-                                trainer.targetLength = value
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Настройки END
-
-            XButton {
-                text: "Готово"
-                anchors.horizontalCenter: parent.horizontalCenter
-                onClicked: {
-                    stackView.pop()
                 }
             }
         }
