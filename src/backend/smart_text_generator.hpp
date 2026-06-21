@@ -30,15 +30,14 @@ public:
 	/// \param dictionary      Частотный словарь языка.
 	/// \return Текст практики; пустая строка, если словарь пуст.
 	[[nodiscard]] std::u32string generate(const std::vector<WeightedNgram>&  weighted_ngrams,
-	                                      const std::vector<std::u32string>& dictionary);
+	                                      const std::vector<std::u32string>& dictionary,
+	                                      double filler_ratio, std::size_t target_length);
 
 private:
 	std::mt19937 rng_;
 
 	static constexpr std::size_t K_TARGET_NGRAMS
 	    = 30; ///< Сколько худших грамм участвуют в генерациию.
-	static constexpr double      K_FILLER_RATIO  = 0.3; ///< Доля обычных читаемых слов.
-	static constexpr std::size_t K_TARGET_LENGTH = 250; ///< Длина батч в символах.
 };
 
 } // namespace typing_trainer
