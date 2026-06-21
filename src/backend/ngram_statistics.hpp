@@ -17,6 +17,7 @@ struct NgramStat
 	std::uint64_t occurrences = 0;   ///< Корректные нажатия, давшие валидное время.
 	double        total_time  = 0.0; ///< Сумма flight-time по ним, сек.
 	std::uint64_t errors      = 0;   ///< Ошибки на этой n-грамме.
+	std::uint64_t attempts    = 0;   ///< Все нажатия (любой flight, даже с выбросами).
 };
 
 /// \brief Сбор статистики проблемных n-грамм (1..3 символа) по потоку нажатий.

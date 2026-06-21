@@ -16,7 +16,7 @@
 namespace
 {
 
-constexpr int         K_SCHEMA_VERSION  = 1;
+constexpr int         K_SCHEMA_VERSION  = 2; // v2: + поле attempts
 constexpr const char* K_STATS_FILE_PATH = "ngram_stats.json";
 
 } // namespace
@@ -28,7 +28,8 @@ void to_json(nlohmann::json& j, const NgramStat& stat)
 {
 	j = nlohmann::json{{"occurrences", stat.occurrences},
 	                   {"total_time", stat.total_time},
-	                   {"errors", stat.errors}};
+	                   {"errors", stat.errors},
+	                   {"attempts", stat.attempts}};
 }
 
 void from_json(const nlohmann::json& j, NgramStat& stat)
@@ -36,6 +37,7 @@ void from_json(const nlohmann::json& j, NgramStat& stat)
 	j.at("occurrences").get_to(stat.occurrences);
 	j.at("total_time").get_to(stat.total_time);
 	j.at("errors").get_to(stat.errors);
+	j.at("attempts").get_to(stat.attempts);
 }
 
 void NgramStatistics::feed(char32_t expected, std::chrono::steady_clock::time_point timestamp,
@@ -72,6 +74,7 @@ void NgramStatistics::accumulate(char32_t expected, std::optional<double> flight
 		if (k > 0) gram.insert(gram.begin(), context_.at(ctx - k));
 
 		NgramStat& stat = stats_[gram];
+		++stat.attempts;
 		if (correct && flight)
 		{
 			stat.total_time += *flight;
