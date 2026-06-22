@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
-import BlindTypingTrainerModule
+import TypingTrainerModule
 
 Button {
     font.family: "Tahoma"

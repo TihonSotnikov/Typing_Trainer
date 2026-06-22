@@ -11,8 +11,10 @@ target_include_directories(
 )
 
 target_link_libraries(
-    frontend PRIVATE
+    frontend
+    PRIVATE
     Qt6::Widgets
     backend
+    PUBLIC
     contracts
 )

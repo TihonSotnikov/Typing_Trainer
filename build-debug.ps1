@@ -1,3 +1,2 @@
-
-cmake -S. -Bbuild -DCMAKE_BUILD_TYPE=Debug
-cmake --build build --config debug
+cmake --preset vcpkg-debug
+cmake --build --preset debug

@@ -3,7 +3,7 @@ import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Effects
 import QtQuick.Layouts
-import BlindTypingTrainerModule 1.0
+import TypingTrainerModule 1.0
 
 ApplicationWindow {
     visible: true
@@ -559,28 +559,7 @@ ApplicationWindow {
             id: settingsInputField
             anchors.fill: parent
             focus: true
-            
-            onActiveFocusChanged: {
-                let isCurrentScreen = (stackView.currentItem === settingsScreen);
 
-                if (!activeFocus && isCurrentScreen) {
-                    settingsInputField.forceActiveFocus();
-                }
-            }
-
-            Keys.onPressed: (event) => {
-                if (event.key === Qt.Key_Escape) {
-                    stackView.pop();
-                }
-                event.accepted = true;
-            }
-        }
-
-        Item {
-            id: settingsInputField
-            anchors.fill: parent
-            focus: true
-            
             onActiveFocusChanged: {
                 let isCurrentScreen = (stackView.currentItem === settingsScreen);
 

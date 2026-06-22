@@ -43,6 +43,13 @@
 # Build directories
 build/
 dist/
+out/
+
+# Release archives
+*.zip
+
+# Runtime user data (n-gram statistics profile)
+ngram_stats.json
 
 # VS Code settings
 .vscode/
